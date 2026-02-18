@@ -13,8 +13,13 @@ use App\Http\Controllers\API\ServicesController;
 use App\Http\Controllers\API\ServiceFeatureController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\DashboardController;
-
+use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\EmailMessageController;
+use App\Http\Controllers\Api\EmailStatisticController;
+use App\Http\Controllers\Api\EmailOpenController;
+use App\Http\Controllers\Api\ViewController;
 use App\Http\Controllers\API\FaqController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -239,4 +244,74 @@ Route::apiResource('users', UserController::class);
 Route::prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/dashboard/stats', [DashboardController::class, 'getFreshStats'])->name('admin.dashboard.stats');
+});
+// ------------------------------------------------------------------------------------------
+Route::prefix('v1')->group(function () {
+    Route::get('/activity-logs/dashboard', [ActivityLogController::class, 'dashboard']);
+    Route::get('/activity-logs/stats', [ActivityLogController::class, 'stats']);
+    Route::post('/activity-logs/clear', [ActivityLogController::class, 'clear']);
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+    Route::post('/activity-logs', [ActivityLogController::class, 'store']);
+    Route::get('/activity-logs/{id}', [ActivityLogController::class, 'show']);
+});
+// ---------------------------------------------------------------------------------------------------------------
+Route::prefix('v1')->group(function () {
+    
+    // Email Messages Routes
+    Route::prefix('emails')->group(function () {
+        Route::get('/dashboard', [EmailMessageController::class, 'dashboard']);
+        Route::get('/{id}/track/open', [EmailMessageController::class, 'trackOpen'])->name('email.track.open');
+        Route::post('/{id}/mark-as-sent', [EmailMessageController::class, 'markAsSent']);
+        Route::post('/{id}/mark-as-delivered', [EmailMessageController::class, 'markAsDelivered']);
+        
+        Route::get('/', [EmailMessageController::class, 'index']);
+        Route::post('/', [EmailMessageController::class, 'store']);
+        Route::get('/{id}', [EmailMessageController::class, 'show']);
+        Route::put('/{id}', [EmailMessageController::class, 'update']);
+        Route::delete('/{id}', [EmailMessageController::class, 'destroy']);
+        
+        Route::get('/{emailId}/opens', [EmailOpenController::class, 'index']);
+    });
+    
+    // Email Statistics Routes
+    Route::prefix('email-stats')->group(function () {
+        Route::get('/', [EmailStatisticController::class, 'index']);
+        Route::get('/trend', [EmailStatisticController::class, 'trend']);
+        Route::get('/summary', [EmailStatisticController::class, 'summary']);
+    });
+    
+    // Email Opens Routes
+    Route::prefix('email-opens')->group(function () {
+        Route::get('/device-breakdown', [EmailOpenController::class, 'deviceBreakdown']);
+        Route::get('/hourly-distribution', [EmailOpenController::class, 'hourlyDistribution']);
+        Route::get('/unique-stats', [EmailOpenController::class, 'uniqueStats']);
+        Route::get('/', [EmailOpenController::class, 'index']);
+    });
+});
+// ---------------------------------------------------------------------------------------------------------
+Route::prefix('v1')->group(function () {
+    
+    // Views Routes
+    Route::prefix('views')->group(function () {
+        // Dashboard with +8% metric
+        Route::get('/dashboard', [ViewController::class, 'dashboard']);
+        
+        // Statistics routes
+        Route::get('/statistics', [ViewController::class, 'statistics']);
+        Route::get('/trend', [ViewController::class, 'trend']);
+        Route::get('/summary', [ViewController::class, 'summary']);
+        
+        // Device breakdown
+        Route::get('/device-breakdown', [ViewController::class, 'deviceBreakdown']);
+        
+        // Views by type
+        Route::get('/by-type', [ViewController::class, 'viewsByType']);
+        
+        // Track new view
+        Route::post('/track', [ViewController::class, 'track']);
+        
+        // CRUD routes
+        Route::get('/', [ViewController::class, 'index']);
+        Route::get('/{id}', [ViewController::class, 'show']);
+    });
 });
