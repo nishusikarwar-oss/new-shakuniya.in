@@ -45,6 +45,7 @@ Route::prefix('blogs')->group(function() {  // 👈 NORMAL PARENTHESES
     Route::get('/search', [BlogController::class, 'search']); // GET /api/blogs/search
     Route::get('/latest', [BlogController::class, 'latest']); // GET /api/blogs/latest
     Route::get('/{identifier}', [BlogController::class, 'show']); // GET /api/blogs/1
+   
 });
 
 // ✅ PROTECTED ROUTES (WITH AUTH)
