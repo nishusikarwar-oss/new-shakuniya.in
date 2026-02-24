@@ -31,6 +31,7 @@ use App\Http\Controllers\API\SiteSettingController;
 use App\Http\Controllers\API\NewsletterSubscriberController;
 use App\Http\Controllers\API\PortfolioProjectController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\DepartmentController;
 use Symfony\Component\HttpFoundation\Request;
 
 /*
@@ -481,3 +482,21 @@ Route::prefix('v1')->group(function () {
         Route::patch('portfolio/{id}/toggle-featured', [PortfolioProjectController::class, 'toggleFeatured']);
         Route::patch('portfolio/{id}/toggle-active', [PortfolioProjectController::class, 'toggleActive']);
     });
+// ---------------------------------------------------------------------------------------------------------------------
+                            //  carrer
+   // Department public routes
+    Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::get('/departments/options', [DepartmentController::class, 'getOptions']);
+    Route::get('/departments/slug/{slug}', [DepartmentController::class, 'findBySlug']);
+    Route::get('/departments/stats', [DepartmentController::class, 'stats']);
+    Route::get('/departments/{id}', [DepartmentController::class, 'show']);
+        
+        // Department admin routes
+        Route::post('/departments', [DepartmentController::class, 'store']);
+        Route::put('/departments/{id}', [DepartmentController::class, 'update']);
+        Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
+        Route::patch('/departments/{id}/toggle-active', [DepartmentController::class, 'toggleActive']);
+        Route::post('/departments/bulk-delete', [DepartmentController::class, 'bulkDelete']);
+        
+        
+    
