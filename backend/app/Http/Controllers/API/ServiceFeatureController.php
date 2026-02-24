@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/API/ServiceFeatureController.php
 
 namespace App\Http\Controllers\API;
 
@@ -8,64 +7,54 @@ use App\Models\ServiceFeature;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class ServiceFeatureController extends Controller
 {
     /**
-     * GET /api/service-features
-     * GET /api/services/{serviceId}/features
-     * List all features with optional service filter
+     * Display features for a specific service
      */
-    public function index(Request $request)
+    public function index(Request $request, $serviceId = null)
     {
-        $query = ServiceFeature::with('service');
-        
-        // Filter by service_id if provided
-        if ($request->has('service_id')) {
-            $query->where('service_id', $request->service_id);
+        if ($serviceId) {
+            // Get features for a specific service
+            $query = ServiceFeature::with('service')
+                ->where('service_id', $serviceId);
+        } else {
+            // Get all features
+            $query = ServiceFeature::with('service');
         }
-        
-        // Filter by multiple service IDs
-        if ($request->has('service_ids')) {
-            $serviceIds = explode(',', $request->service_ids);
-            $query->whereIn('service_id', $serviceIds);
+
+        // Filter active only (for frontend)
+        if ($request->boolean('active_only')) {
+            $query->where('is_active', true);
         }
-        
-        $features = $query->get();
-        
-        // Group by service if requested
-        if ($request->has('group_by_service') && $request->group_by_service == true) {
-            $grouped = $features->groupBy('service_id');
-            return response()->json([
-                'success' => true,
-                'data' => $grouped,
-                'total_services' => $grouped->count(),
-                'total_features' => $features->count()
-            ]);
-        }
-        
+
+        // Order by display order
+        $query->orderBy('display_order', 'asc');
+
+        $features = $query->paginate($request->get('per_page', 15));
+
         return response()->json([
             'success' => true,
-            'data' => $features,
-            'total' => $features->count()
+            'data' => $features
         ]);
     }
 
     /**
-     * POST /api/service-features
-     * POST /api/services/{serviceId}/features
-     * Create a new service feature
+     * Store a newly created feature.
      */
-    public function store(Request $request, $serviceId = null)
+    public function store(Request $request)
     {
-        // If serviceId is provided in URL, use it
-        $service_id = $serviceId ?? $request->service_id;
-        
-        $validator = Validator::make(array_merge($request->all(), [
-            'service_id' => $service_id
-        ]), [
-            'service_id' => 'required|exists:services,id',
-            'feature' => 'required|string|max:255'
+        $validator = Validator::make($request->all(), [
+            'service_id' => 'required|integer|exists:services,service_id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'icon_name' => 'nullable|string|max:100',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'display_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
@@ -75,30 +64,40 @@ class ServiceFeatureController extends Controller
             ], 422);
         }
 
-        $feature = ServiceFeature::create([
-            'service_id' => $service_id,
-            'feature' => $request->feature
-        ]);
+        $data = $request->except(['icon', 'image']);
+
+        // Handle icon upload
+        if ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('service-features/icons', 'public');
+            $data['icon_url'] = $path;
+        }
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('service-features/images', 'public');
+            $data['image_url'] = $path;
+        }
+
+        $feature = ServiceFeature::create($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Service feature created successfully',
+            'message' => 'Feature created successfully',
             'data' => $feature->load('service')
         ], 201);
     }
 
     /**
-     * GET /api/service-features/{id}
-     * Get single service feature
+     * Display the specified feature.
      */
     public function show($id)
     {
         $feature = ServiceFeature::with('service')->find($id);
-        
+
         if (!$feature) {
             return response()->json([
                 'success' => false,
-                'message' => 'Service feature not found'
+                'message' => 'Feature not found'
             ], 404);
         }
 
@@ -109,23 +108,28 @@ class ServiceFeatureController extends Controller
     }
 
     /**
-     * PUT /api/service-features/{id}
-     * Update service feature
+     * Update the specified feature.
      */
     public function update(Request $request, $id)
     {
         $feature = ServiceFeature::find($id);
-        
+
         if (!$feature) {
             return response()->json([
                 'success' => false,
-                'message' => 'Service feature not found'
+                'message' => 'Feature not found'
             ], 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'service_id' => 'sometimes|required|exists:services,id',
-            'feature' => 'sometimes|required|string|max:255'
+            'service_id' => 'sometimes|required|integer|exists:services,service_id',
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'icon_name' => 'nullable|string|max:100',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'display_order' => 'nullable|integer',
+            'is_active' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
@@ -135,56 +139,76 @@ class ServiceFeatureController extends Controller
             ], 422);
         }
 
-        $feature->update($request->all());
+        $data = $request->except(['icon', 'image']);
+
+        // Handle icon upload
+        if ($request->hasFile('icon')) {
+            // Delete old icon
+            if ($feature->icon_url) {
+                Storage::disk('public')->delete($feature->icon_url);
+            }
+            $path = $request->file('icon')->store('service-features/icons', 'public');
+            $data['icon_url'] = $path;
+        }
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($feature->image_url) {
+                Storage::disk('public')->delete($feature->image_url);
+            }
+            $path = $request->file('image')->store('service-features/images', 'public');
+            $data['image_url'] = $path;
+        }
+
+        $feature->update($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Service feature updated successfully',
+            'message' => 'Feature updated successfully',
             'data' => $feature->load('service')
         ]);
     }
 
     /**
-     * DELETE /api/service-features/{id}
-     * Delete service feature
+     * Remove the specified feature.
      */
     public function destroy($id)
     {
         $feature = ServiceFeature::find($id);
-        
+
         if (!$feature) {
             return response()->json([
                 'success' => false,
-                'message' => 'Service feature not found'
+                'message' => 'Feature not found'
             ], 404);
+        }
+
+        // Delete associated files
+        if ($feature->icon_url) {
+            Storage::disk('public')->delete($feature->icon_url);
+        }
+        if ($feature->image_url) {
+            Storage::disk('public')->delete($feature->image_url);
         }
 
         $feature->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Service feature deleted successfully'
+            'message' => 'Feature deleted successfully'
         ]);
     }
 
     /**
-     * POST /api/services/{serviceId}/features/bulk
-     * Bulk create features for a service
+     * Reorder features
      */
-    public function bulkStore(Request $request, $serviceId)
+    public function reorder(Request $request)
     {
-        // Verify service exists
-        $service = Service::find($serviceId);
-        if (!$service) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Service not found'
-            ], 404);
-        }
-
         $validator = Validator::make($request->all(), [
-            'features' => 'required|array|min:1',
-            'features.*' => 'required|string|max:255'
+            'orders' => 'required|array',
+            'orders.*.feature_id' => 'required|integer|exists:service_features,feature_id',
+            'orders.*.display_order' => 'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -194,39 +218,49 @@ class ServiceFeatureController extends Controller
             ], 422);
         }
 
-        $createdFeatures = [];
-        foreach ($request->features as $featureText) {
-            $createdFeatures[] = ServiceFeature::create([
-                'service_id' => $serviceId,
-                'feature' => $featureText
-            ]);
+        foreach ($request->orders as $order) {
+            ServiceFeature::where('feature_id', $order['feature_id'])
+                ->update(['display_order' => $order['display_order']]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => count($createdFeatures) . ' features created successfully',
-            'data' => $createdFeatures
-        ], 201);
+            'message' => 'Features reordered successfully'
+        ]);
     }
 
     /**
-     * PUT /api/services/{serviceId}/features
-     * Sync features (replace all features for a service)
+     * Toggle active status
      */
-    public function sync(Request $request, $serviceId)
+    public function toggleActive($id)
     {
-        // Verify service exists
-        $service = Service::find($serviceId);
-        if (!$service) {
+        $feature = ServiceFeature::find($id);
+
+        if (!$feature) {
             return response()->json([
                 'success' => false,
-                'message' => 'Service not found'
+                'message' => 'Feature not found'
             ], 404);
         }
 
+        $feature->is_active = !$feature->is_active;
+        $feature->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Feature active status updated',
+            'is_active' => $feature->is_active
+        ]);
+    }
+
+    /**
+     * Bulk delete features
+     */
+    public function bulkDelete(Request $request)
+    {
         $validator = Validator::make($request->all(), [
-            'features' => 'required|array',
-            'features.*' => 'required|string|max:255'
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:service_features,feature_id'
         ]);
 
         if ($validator->fails()) {
@@ -236,46 +270,77 @@ class ServiceFeatureController extends Controller
             ], 422);
         }
 
-        // Delete existing features
-        $service->features()->delete();
-
-        // Create new features
-        $createdFeatures = [];
-        foreach ($request->features as $featureText) {
-            $createdFeatures[] = ServiceFeature::create([
-                'service_id' => $serviceId,
-                'feature' => $featureText
+        try {
+            $ids = $request->ids;
+            
+            // Get features to delete their files
+            $features = ServiceFeature::whereIn('feature_id', $ids)->get();
+            
+            // Delete associated files
+            foreach ($features as $feature) {
+                if ($feature->icon_url) {
+                    Storage::disk('public')->delete($feature->icon_url);
+                }
+                if ($feature->image_url) {
+                    Storage::disk('public')->delete($feature->image_url);
+                }
+            }
+            
+            // Delete features
+            ServiceFeature::whereIn('feature_id', $ids)->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => count($ids) . ' features deleted successfully'
             ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting features: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Features synced successfully',
-            'data' => $createdFeatures
-        ]);
     }
 
     /**
-     * DELETE /api/services/{serviceId}/features
-     * Delete all features for a service
+     * Clone features from one service to another
      */
-    public function destroyAll($serviceId)
+    public function clone(Request $request)
     {
-        $service = Service::find($serviceId);
+        $validator = Validator::make($request->all(), [
+            'from_service_id' => 'required|integer|exists:services,service_id',
+            'to_service_id' => 'required|integer|exists:services,service_id|different:from_service_id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Get features from source service
+        $sourceFeatures = ServiceFeature::where('service_id', $request->from_service_id)->get();
         
-        if (!$service) {
+        if ($sourceFeatures->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Service not found'
+                'message' => 'No features found in source service'
             ], 404);
         }
 
-        $count = $service->features()->count();
-        $service->features()->delete();
+        $clonedCount = 0;
+        foreach ($sourceFeatures as $feature) {
+            $newFeature = $feature->replicate();
+            $newFeature->service_id = $request->to_service_id;
+            $newFeature->created_at = now();
+            $newFeature->save();
+            $clonedCount++;
+        }
 
         return response()->json([
             'success' => true,
-            'message' => $count . ' features deleted successfully'
+            'message' => "{$clonedCount} features cloned successfully"
         ]);
     }
 }

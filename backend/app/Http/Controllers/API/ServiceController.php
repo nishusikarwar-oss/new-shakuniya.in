@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\Service;
-use App\Models\Company;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Service;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -115,7 +114,7 @@ class ServiceController extends Controller
 
         // Set default company_id if not provided
         if (!isset($data['company_id'])) {
-            $company = Company::first();
+            $company = \App\Models\Company::first();
             $data['company_id'] = $company?->company_id ?? 1;
         }
 

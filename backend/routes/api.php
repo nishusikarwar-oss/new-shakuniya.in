@@ -9,7 +9,7 @@ use App\Http\Controllers\API\JobOpeningController;
 use App\Http\Controllers\API\PerkController;
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ProductFeatureController;
-use App\Http\Controllers\API\ServicesController;
+use App\Http\Controllers\API\ServiceController ;
 use App\Http\Controllers\API\ServiceFeatureController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\DashboardController;
@@ -19,6 +19,19 @@ use App\Http\Controllers\Api\EmailStatisticController;
 use App\Http\Controllers\Api\EmailOpenController;
 use App\Http\Controllers\Api\ViewController;
 use App\Http\Controllers\API\FaqController;
+use App\Http\Controllers\API\CompanyController;
+use App\Http\Controllers\API\StatisticController;
+use App\Http\Controllers\API\WhyChooseUsPointController;
+use App\Http\Controllers\API\ProcessStepController;
+use App\Http\Controllers\API\CommitmentController;
+use App\Http\Controllers\API\TeamMemberController;
+use App\Http\Controllers\API\TestimonialController;
+use App\Http\Controllers\API\ContactInquiryController;
+use App\Http\Controllers\API\SiteSettingController;
+use App\Http\Controllers\API\NewsletterSubscriberController;
+use App\Http\Controllers\API\PortfolioProjectController;
+use App\Http\Controllers\API\AuthController;
+use Symfony\Component\HttpFoundation\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -165,55 +178,7 @@ Route::prefix('product-features')->group(function() {
     });
 });
 // --------------------------------------------------------------------------------------------------------------------?
-// ✅ BEST PRACTICE: ALL SERVICES ROUTES TOGETHER
-Route::prefix('services')->group(function() {
-    
-  // 🔓 PUBLIC ROUTES - SPECIFIC ROUTES FIRST!
-Route::get('/search', [ServicesController::class, 'search']); // ✅ FIRST
-Route::get('/slug/{slug}', [ServicesController::class, 'showBySlug']); // ✅ SECOND
-Route::get('/', [ServicesController::class, 'index']); // ✅ THIRD
-Route::get('/{id}', [ServicesController::class, 'show']); // ✅ LAST
 
-// 🔒 PROTECTED ROUTES
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('services', [ServicesController::class, 'store']);
-    Route::put('services/{id}', [ServicesController::class, 'update']);
-    Route::delete('services/{id}', [ServicesController::class, 'destroy']);
-});
-});
-// -----------------------------------------------------------------------------------------------------------------------
-// ✅ SERVICE FEATURES API ROUTES
-Route::prefix('service-features')->group(function() {
-    
-    // 🔓 PUBLIC ROUTES
-    Route::get('/', [ServiceFeatureController::class, 'index']);
-    Route::get('{id}', [ServiceFeatureController::class, 'show']);
-
-    // 🔒 PROTECTED ROUTES
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/', [ServiceFeatureController::class, 'store']);
-        Route::put('{id}', [ServiceFeatureController::class, 'update']);
-        Route::delete('{id}', [ServiceFeatureController::class, 'destroy']);
-    });
-});
-
-// ✅ SERVICE-SPECIFIC FEATURES ROUTES
-Route::prefix('services')->group(function() {
-    
-    // 🔓 PUBLIC ROUTES
-    Route::get('{serviceId}/features', [ServiceFeatureController::class, 'index']);
-    
-    // 🔒 PROTECTED ROUTES
-    Route::middleware('auth:sanctum')->group(function () {
-        // Single feature operations
-        Route::post('{serviceId}/features', [ServiceFeatureController::class, 'store']);
-        
-        // Bulk operations
-        Route::post('{serviceId}/features/bulk', [ServiceFeatureController::class, 'bulkStore']);
-        Route::put('{serviceId}/features', [ServiceFeatureController::class, 'sync']);
-        Route::delete('{serviceId}/features', [ServiceFeatureController::class, 'destroyAll']);
-    });
-});
 // -------------------------------------------------------------------------------------------------------------
 // Public FAQ routes
 Route::prefix('faqs')->name('api.faqs.')->group(function () {
@@ -315,3 +280,204 @@ Route::prefix('v1')->group(function () {
         Route::get('/{id}', [ViewController::class, 'show']);
     });
 });
+
+// ---------------------------------------------------------------------------------------------------------------------
+   // ========== PUBLIC ROUTES (No Auth Required) ==========
+    
+    // Auth routes
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('register', [AuthController::class, 'register']);
+    
+   
+    
+    // Newsletter public routes
+    Route::post('newsletter/subscribe', [NewsletterSubscriberController::class, 'store']);
+    Route::post('newsletter/unsubscribe', [NewsletterSubscriberController::class, 'unsubscribe']);
+    
+    // Company info routes
+    Route::get('company/settings', [CompanyController::class, 'settings']);
+    Route::get('company/meta', [CompanyController::class, 'meta']);
+    Route::get('companies', [CompanyController::class, 'index']);
+    Route::get('companies/{id}', [CompanyController::class, 'show']);
+    
+    // Services routes
+    Route::get('services', [ServiceController::class, 'index']);
+    Route::get('services/slug/{slug}', [ServiceController::class, 'findBySlug']);
+    Route::get('services/{id}', [ServiceController::class, 'show']);
+    
+    // Service Features routes
+    Route::get('services/{serviceId}/features', [ServiceFeatureController::class, 'index']);
+    Route::get('service-features', [ServiceFeatureController::class, 'index']);
+    Route::get('service-features/{id}', [ServiceFeatureController::class, 'show']);
+    
+    // Commitments routes
+    Route::get('commitments', [CommitmentController::class, 'index']);
+    Route::get('commitments/{id}', [CommitmentController::class, 'show']);
+    
+    // Process Steps routes
+    Route::get('process-steps', [ProcessStepController::class, 'index']);
+    Route::get('process-steps/range', [ProcessStepController::class, 'getRange']);
+    Route::get('process-steps/{id}', [ProcessStepController::class, 'show']);
+    
+    // Statistics routes
+    Route::get('statistics', [StatisticController::class, 'index']);
+    Route::get('statistics/summary', [StatisticController::class, 'summary']);
+    Route::get('statistics/{id}', [StatisticController::class, 'show']);
+    
+    // Why Choose Us Points routes
+    Route::get('why-choose-us-points', [WhyChooseUsPointController::class, 'index']);
+    Route::get('why-choose-us-points/random', [WhyChooseUsPointController::class, 'getRandom']);
+    Route::get('why-choose-us-points/{id}', [WhyChooseUsPointController::class, 'show']);
+    
+    // Team Members routes
+    Route::get('team-members', [TeamMemberController::class, 'index']);
+    Route::get('team-members/with-social', [TeamMemberController::class, 'getWithSocialLinks']);
+    Route::get('team-members/by-position', [TeamMemberController::class, 'getByPosition']);
+    Route::get('team-members/{id}', [TeamMemberController::class, 'show']);
+    
+    // Testimonials routes
+    Route::get('testimonials', [TestimonialController::class, 'index']);
+    Route::get('testimonials/rating-stats', [TestimonialController::class, 'ratingStats']);
+    Route::get('testimonials/featured', [TestimonialController::class, 'getFeatured']);
+    Route::get('testimonials/{id}', [TestimonialController::class, 'show']);
+    
+    // Public settings routes (read-only)
+    Route::get('settings/all', [SiteSettingController::class, 'getAll']);
+    Route::get('settings/key/{key}/value', [SiteSettingController::class, 'getValue']);
+    Route::get('settings/key/{key}', [SiteSettingController::class, 'getByKey']);
+    
+    // Portfolio public routes
+    Route::get('portfolio', [PortfolioProjectController::class, 'index']);
+    Route::get('portfolio/categories', [PortfolioProjectController::class, 'getCategories']);
+    Route::get('portfolio/years', [PortfolioProjectController::class, 'getYears']);
+    Route::get('portfolio/featured', [PortfolioProjectController::class, 'getFeatured']);
+    Route::get('portfolio/recent', [PortfolioProjectController::class, 'getRecent']);
+    Route::get('portfolio/category/{category}', [PortfolioProjectController::class, 'getByCategory']);
+    Route::get('portfolio/slug/{slug}', [PortfolioProjectController::class, 'findBySlug']);
+    Route::get('portfolio/{id}', [PortfolioProjectController::class, 'show']);
+
+    // ========== PROTECTED ROUTES (Auth Required) ==========
+    Route::middleware('auth:sanctum')->group(function () {
+        
+        // Auth
+        Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('user', [AuthController::class, 'user']);
+        
+        // Newsletter admin routes
+        Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
+        Route::get('newsletter/subscribers/stats', [NewsletterSubscriberController::class, 'stats']);
+        Route::get('newsletter/subscribers/export', [NewsletterSubscriberController::class, 'export']);
+        Route::get('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'show']);
+        Route::get('newsletter/subscribers/email/{email}', [NewsletterSubscriberController::class, 'findByEmail']);
+        Route::put('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'update']);
+        Route::post('newsletter/subscribers/{id}/resubscribe', [NewsletterSubscriberController::class, 'resubscribe']);
+        Route::post('newsletter/subscribers/{id}/unsubscribe', [NewsletterSubscriberController::class, 'unsubscribeById']);
+        Route::delete('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'destroy']);
+        Route::post('newsletter/subscribers/bulk-delete', [NewsletterSubscriberController::class, 'bulkDelete']);
+        Route::post('newsletter/send', [NewsletterSubscriberController::class, 'sendNewsletter']);
+        
+        // Company routes
+        Route::post('companies', [CompanyController::class, 'store']);
+        Route::put('companies/{id}', [CompanyController::class, 'update']);
+        Route::delete('companies/{id}', [CompanyController::class, 'destroy']);
+        Route::post('companies/bulk-delete', [CompanyController::class, 'bulkDelete']);
+        
+        // Service routes
+        Route::post('services', [ServiceController::class, 'store']);
+        Route::put('services/{id}', [ServiceController::class, 'update']);
+        Route::delete('services/{id}', [ServiceController::class, 'destroy']);
+        Route::post('services/bulk-delete', [ServiceController::class, 'bulkDelete']);
+        Route::post('services/reorder', [ServiceController::class, 'reorder']);
+        Route::patch('services/{id}/toggle-featured', [ServiceController::class, 'toggleFeatured']);
+        Route::patch('services/{id}/toggle-active', [ServiceController::class, 'toggleActive']);
+        
+        // Service Features routes
+        Route::post('service-features', [ServiceFeatureController::class, 'store']);
+        Route::put('service-features/{id}', [ServiceFeatureController::class, 'update']);
+        Route::delete('service-features/{id}', [ServiceFeatureController::class, 'destroy']);
+        Route::post('service-features/bulk-delete', [ServiceFeatureController::class, 'bulkDelete']);
+        Route::post('service-features/reorder', [ServiceFeatureController::class, 'reorder']);
+        Route::patch('service-features/{id}/toggle-active', [ServiceFeatureController::class, 'toggleActive']);
+        Route::post('service-features/clone', [ServiceFeatureController::class, 'clone']);
+        
+        // Commitments routes
+        Route::post('commitments', [CommitmentController::class, 'store']);
+        Route::put('commitments/{id}', [CommitmentController::class, 'update']);
+        Route::delete('commitments/{id}', [CommitmentController::class, 'destroy']);
+        Route::post('commitments/bulk-delete', [CommitmentController::class, 'bulkDelete']);
+        Route::post('commitments/reorder', [CommitmentController::class, 'reorder']);
+        Route::patch('commitments/{id}/toggle-active', [CommitmentController::class, 'toggleActive']);
+        
+        // Process Steps routes
+        Route::post('process-steps', [ProcessStepController::class, 'store']);
+        Route::put('process-steps/{id}', [ProcessStepController::class, 'update']);
+        Route::delete('process-steps/{id}', [ProcessStepController::class, 'destroy']);
+        Route::post('process-steps/bulk-delete', [ProcessStepController::class, 'bulkDelete']);
+        Route::post('process-steps/reorder', [ProcessStepController::class, 'reorder']);
+        Route::patch('process-steps/{id}/toggle-active', [ProcessStepController::class, 'toggleActive']);
+        
+        // Statistics routes
+        Route::post('statistics', [StatisticController::class, 'store']);
+        Route::put('statistics/{id}', [StatisticController::class, 'update']);
+        Route::delete('statistics/{id}', [StatisticController::class, 'destroy']);
+        Route::post('statistics/bulk-delete', [StatisticController::class, 'bulkDelete']);
+        Route::post('statistics/reorder', [StatisticController::class, 'reorder']);
+        Route::patch('statistics/{id}/toggle-active', [StatisticController::class, 'toggleActive']);
+        Route::post('statistics/{id}/increment', [StatisticController::class, 'increment']);
+        Route::post('statistics/{id}/decrement', [StatisticController::class, 'decrement']);
+        
+        // Why Choose Us Points routes
+        Route::post('why-choose-us-points', [WhyChooseUsPointController::class, 'store']);
+        Route::put('why-choose-us-points/{id}', [WhyChooseUsPointController::class, 'update']);
+        Route::delete('why-choose-us-points/{id}', [WhyChooseUsPointController::class, 'destroy']);
+        Route::post('why-choose-us-points/bulk-delete', [WhyChooseUsPointController::class, 'bulkDelete']);
+        Route::post('why-choose-us-points/reorder', [WhyChooseUsPointController::class, 'reorder']);
+        Route::patch('why-choose-us-points/{id}/toggle-active', [WhyChooseUsPointController::class, 'toggleActive']);
+        
+        // Team Members routes
+        Route::post('team-members', [TeamMemberController::class, 'store']);
+        Route::put('team-members/{id}', [TeamMemberController::class, 'update']);
+        Route::delete('team-members/{id}', [TeamMemberController::class, 'destroy']);
+        Route::post('team-members/bulk-delete', [TeamMemberController::class, 'bulkDelete']);
+        Route::post('team-members/reorder', [TeamMemberController::class, 'reorder']);
+        Route::patch('team-members/{id}/toggle-active', [TeamMemberController::class, 'toggleActive']);
+        
+        // Testimonials routes
+        Route::post('testimonials', [TestimonialController::class, 'store']);
+        Route::put('testimonials/{id}', [TestimonialController::class, 'update']);
+        Route::delete('testimonials/{id}', [TestimonialController::class, 'destroy']);
+        Route::post('testimonials/bulk-delete', [TestimonialController::class, 'bulkDelete']);
+        Route::post('testimonials/reorder', [TestimonialController::class, 'reorder']);
+        Route::patch('testimonials/{id}/toggle-active', [TestimonialController::class, 'toggleActive']);
+        
+        // Contact Inquiries routes
+        Route::get('contact-inquiries', [ContactInquiryController::class, 'index']);
+        Route::get('contact-inquiries/stats', [ContactInquiryController::class, 'stats']);
+        Route::get('contact-inquiries/export', [ContactInquiryController::class, 'export']);
+        Route::get('contact-inquiries/{id}', [ContactInquiryController::class, 'show']);
+        Route::put('contact-inquiries/{id}', [ContactInquiryController::class, 'update']);
+        Route::patch('contact-inquiries/{id}/status', [ContactInquiryController::class, 'updateStatus']);
+        Route::delete('contact-inquiries/{id}', [ContactInquiryController::class, 'destroy']);
+        Route::post('contact-inquiries/bulk-delete', [ContactInquiryController::class, 'bulkDelete']);
+        
+        // Site Settings routes (admin only - full CRUD)
+        Route::get('settings', [SiteSettingController::class, 'index']);
+        Route::post('settings', [SiteSettingController::class, 'store']);
+        Route::post('settings/bulk-update', [SiteSettingController::class, 'bulkUpdate']);
+        Route::post('settings/reset', [SiteSettingController::class, 'resetToDefaults']);
+        Route::get('settings/{id}', [SiteSettingController::class, 'show']);
+        Route::put('settings/{id}', [SiteSettingController::class, 'update']);
+        Route::put('settings/key/{key}', [SiteSettingController::class, 'updateByKey']);
+        Route::delete('settings/{id}', [SiteSettingController::class, 'destroy']);
+        Route::delete('settings/key/{key}', [SiteSettingController::class, 'deleteByKey']);
+        Route::post('settings/bulk-delete', [SiteSettingController::class, 'bulkDelete']);
+        
+        // Portfolio admin routes
+        Route::post('portfolio', [PortfolioProjectController::class, 'store']);
+        Route::put('portfolio/{id}', [PortfolioProjectController::class, 'update']);
+        Route::delete('portfolio/{id}', [PortfolioProjectController::class, 'destroy']);
+        Route::post('portfolio/bulk-delete', [PortfolioProjectController::class, 'bulkDelete']);
+        Route::post('portfolio/reorder', [PortfolioProjectController::class, 'reorder']);
+        Route::patch('portfolio/{id}/toggle-featured', [PortfolioProjectController::class, 'toggleFeatured']);
+        Route::patch('portfolio/{id}/toggle-active', [PortfolioProjectController::class, 'toggleActive']);
+    });
