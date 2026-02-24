@@ -72,10 +72,32 @@ class BlogController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Blog $blog)
+    public function show($identifier)
     {
-        //
+        try {
+            $blog = Blog::where('id', $identifier)
+                        ->orWhere('slug', $identifier)
+                        ->firstOrFail();
+
+            return response()->json([
+                'success' => true,
+                'data' => $blog,
+                'message' => 'Blog retrieved successfully.'
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Blog not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve blog.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
     /**
      * Update the specified resource in storage.
