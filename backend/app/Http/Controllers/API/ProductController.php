@@ -2,158 +2,122 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
-use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of products.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
-        try {
-            $query = Product::query();
+        $query = Product::with('creator:id,name', 'updater:id,name');
 
-            // Search functionality
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('short_description', 'like', "%{$search}%")
-                      ->orWhere('slug', 'like', "%{$search}%");
-                });
-            }
-
-            // Sort functionality
-            $sortField = $request->get('sort_by', 'id');
-            $sortOrder = $request->get('sort_order', 'asc');
-            $query->orderBy($sortField, $sortOrder);
-
-            // Pagination
-            $perPage = $request->get('per_page', 10);
-            $perPage = min(max(1, $perPage), 50);
-
-            $products = $query->paginate($perPage);
-
-            return response()->json([
-                'success' => true,
-                'data' => $products->items(),
-                'meta' => [
-                    'total' => $products->total(),
-                    'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                    'per_page' => $products->perPage(),
-                    'from' => $products->firstItem(),
-                    'to' => $products->lastItem(),
-                ],
-                'message' => 'Products retrieved successfully.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve products.',
-                'error' => $e->getMessage()
-            ], 500);
+        // Filter active only (for frontend)
+        if ($request->boolean('active_only')) {
+            $query->active();
         }
+
+        // Search functionality
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        // Filter by price range
+        if ($request->has('price_min') && $request->has('price_max')) {
+            $currency = $request->get('currency', 'inr');
+            $query->priceBetween($request->price_min, $request->price_max, $currency);
+        }
+
+        // Order by display order
+        $query->ordered();
+
+        $products = $query->paginate($request->get('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products retrieved successfully',
+            'data' => $products
+        ]);
     }
 
     /**
-     * Get all products without pagination.
-     * 
-     * @return \Illuminate\Http\Response
+     * Get product by slug.
      */
-    public function all()
+    public function findBySlug($slug)
     {
-        try {
-            $products = Product::orderBy('id', 'asc')->get();
+        $product = Product::with('creator:id,name', 'updater:id,name')
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
 
-            return response()->json([
-                'success' => true,
-                'data' => ProductResource::collection($products),
-                'total' => $products->count(),
-                'message' => 'All products retrieved successfully.'
-            ]);
-        } catch (\Exception $e) {
+        if (!$product) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve products.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Product not found'
+            ], 404);
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product retrieved successfully',
+            'data' => $product
+        ]);
     }
 
     /**
      * Store a newly created product.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:200',
+            'slug' => 'nullable|string|max:100|unique:products',
+            'short_description' => 'nullable|string',
+            'full_description' => 'nullable|string',
+            'price_usd' => 'nullable|numeric|min:0',
+            'price_inr' => 'nullable|numeric|min:0',
+            'image_url' => 'nullable|url',
+            'video_url' => 'nullable|url',
+            'is_active' => 'nullable|boolean',
+            'display_order' => 'nullable|integer|min:0',
+            'meta_title' => 'nullable|string|max:200',
+            'meta_description' => 'nullable|string',
+            'meta_keywords' => 'nullable|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $validator = Validator::make($request->all(), [
-                'title' => 'required|string|max:255',
-                'slug' => 'nullable|string|max:255|unique:products,slug',
-                'short_description' => 'nullable|string|max:500',
-                'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg,gif|max:2048',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
-                ], 422);
-            }
-
-            $data = [
-                'title' => $request->title,
-                'short_description' => $request->short_description,
-            ];
-
+            $data = $request->all();
+            
             // Generate slug if not provided
-            if ($request->has('slug') && !empty($request->slug)) {
-                $data['slug'] = Str::slug($request->slug);
-            } else {
+            if (empty($data['slug'])) {
                 $data['slug'] = Str::slug($request->title);
-                
-                // Ensure slug is unique
-                $count = 1;
-                $originalSlug = $data['slug'];
-                while (Product::where('slug', $data['slug'])->exists()) {
-                    $data['slug'] = $originalSlug . '-' . $count;
-                    $count++;
-                }
-            }
-
-            // Handle icon upload
-            if ($request->hasFile('icon')) {
-                $icon = $request->file('icon');
-                $filename = 'product_' . time() . '_' . uniqid() . '.' . $icon->getClientOriginalExtension();
-                $icon->storeAs('products', $filename, 'public');
-                $data['icon'] = $filename;
             }
 
             $product = Product::create($data);
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductResource($product),
-                'message' => 'Product created successfully.'
+                'message' => 'Product created successfully',
+                'data' => $product->load('creator:id,name')
             ], 201);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create product.',
+                'message' => 'Failed to create product',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -161,43 +125,29 @@ class ProductController extends Controller
 
     /**
      * Display the specified product.
-     * 
-     * @param  string  $identifier (id or slug)
-     * @return \Illuminate\Http\Response
      */
-    public function show($identifier)
+    public function show($id)
     {
         try {
-            $product = Product::where('id', $identifier)
-                ->orWhere('slug', $identifier)
-                ->with('features')
-                ->firstOrFail();
+            $product = Product::with('creator:id,name', 'updater:id,name')
+                ->findOrFail($id);
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductResource($product),
-                'message' => 'Product retrieved successfully.'
+                'message' => 'Product retrieved successfully',
+                'data' => $product
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve product.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Product not found'
+            ], 404);
         }
     }
 
     /**
      * Update the specified product.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
@@ -205,180 +155,190 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'title' => 'sometimes|required|string|max:255',
-                'slug' => 'sometimes|required|string|max:255|unique:products,slug,' . $id,
-                'short_description' => 'nullable|string|max:500',
-                'icon' => 'nullable|image|mimes:png,jpg,jpeg,svg,gif|max:2048',
+                'title' => 'sometimes|required|string|max:200',
+                'slug' => 'nullable|string|max:100|unique:products,slug,' . $id . ',id',
+                'short_description' => 'nullable|string',
+                'full_description' => 'nullable|string',
+                'price_usd' => 'nullable|numeric|min:0',
+                'price_inr' => 'nullable|numeric|min:0',
+                'image_url' => 'nullable|url',
+                'video_url' => 'nullable|url',
+                'is_active' => 'nullable|boolean',
+                'display_order' => 'nullable|integer|min:0',
+                'meta_title' => 'nullable|string|max:200',
+                'meta_description' => 'nullable|string',
+                'meta_keywords' => 'nullable|string'
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
                 ], 422);
             }
 
-            $data = [];
-
-            if ($request->has('title')) {
-                $data['title'] = $request->title;
-            }
-
-            if ($request->has('short_description')) {
-                $data['short_description'] = $request->short_description;
-            }
-
-            // Handle slug
-            if ($request->has('slug') && !empty($request->slug)) {
-                $data['slug'] = Str::slug($request->slug);
-            } elseif ($request->has('title') && !$request->has('slug')) {
-                $data['slug'] = Str::slug($request->title);
-                
-                $count = 1;
-                $originalSlug = $data['slug'];
-                while (Product::where('slug', $data['slug'])->where('id', '!=', $id)->exists()) {
-                    $data['slug'] = $originalSlug . '-' . $count;
-                    $count++;
-                }
-            }
-
-            // Handle icon upload
-            if ($request->hasFile('icon')) {
-                // Delete old icon
-                if ($product->icon) {
-                    Storage::disk('public')->delete('products/' . $product->icon);
-                }
-
-                $icon = $request->file('icon');
-                $filename = 'product_' . time() . '_' . uniqid() . '.' . $icon->getClientOriginalExtension();
-                $icon->storeAs('products', $filename, 'public');
-                $data['icon'] = $filename;
-            }
-
-            // Handle icon removal
-            if ($request->has('remove_icon') && $request->remove_icon == true) {
-                if ($product->icon) {
-                    Storage::disk('public')->delete('products/' . $product->icon);
-                    $data['icon'] = null;
-                }
-            }
-
-            $product->update($data);
+            $product->update($request->all());
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductResource($product),
-                'message' => 'Product updated successfully.'
+                'message' => 'Product updated successfully',
+                'data' => $product->load('creator:id,name', 'updater:id,name')
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update product.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Product not found'
+            ], 404);
         }
     }
 
     /**
      * Remove the specified product.
-     * 
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
         try {
             $product = Product::findOrFail($id);
-
-            // Delete icon
-            if ($product->icon) {
-                Storage::disk('public')->delete('products/' . $product->icon);
-            }
-
             $product->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Product deleted successfully.'
+                'message' => 'Product deleted successfully'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete product.',
+                'message' => 'Product not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Toggle active status
+     */
+    public function toggleActive($id)
+    {
+        try {
+            $product = Product::findOrFail($id);
+            $product->is_active = !$product->is_active;
+            $product->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product status updated successfully',
+                'is_active' => $product->is_active
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Reorder products
+     */
+    public function reorder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'orders' => 'required|array',
+            'orders.*.id' => 'required|string|exists:products,id',
+            'orders.*.display_order' => 'required|integer|min:0'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            foreach ($request->orders as $order) {
+                Product::where('id', $order['id'])
+                    ->update(['display_order' => $order['display_order']]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Products reordered successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reorder products',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get recent products.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Bulk delete products
      */
-    public function recent(Request $request)
+    public function bulkDelete(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'ids' => 'required|array',
+            'ids.*' => 'string|exists:products,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $limit = min($request->get('limit', 5), 20);
-            
-            $products = Product::orderBy('created_at', 'desc')
-                ->limit($limit)
-                ->get();
+            Product::whereIn('id', $request->ids)->delete();
 
             return response()->json([
                 'success' => true,
-                'data' => ProductResource::collection($products),
-                'message' => 'Recent products retrieved successfully.'
+                'message' => count($request->ids) . ' products deleted successfully'
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve recent products.',
+                'message' => 'Failed to delete products',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get product by slug.
-     * 
-     * @param  string  $slug
-     * @return \Illuminate\Http\Response
+     * Get products as options (for dropdowns)
      */
-    public function bySlug($slug)
+    public function getOptions(Request $request)
     {
-        try {
-            $product = Product::where('slug', $slug)
-                ->with('features')
-                ->firstOrFail();
+        $query = Product::query();
 
-            return response()->json([
-                'success' => true,
-                'data' => new ProductResource($product),
-                'message' => 'Product retrieved successfully.'
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.'
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve product.',
-                'error' => $e->getMessage()
-            ], 500);
+        if ($request->boolean('active_only')) {
+            $query->active();
         }
+
+        $products = $query->ordered()
+            ->get(['id', 'title', 'slug', 'price_usd', 'price_inr'])
+            ->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'title' => $product->title,
+                    'slug' => $product->slug,
+                    'price' => $product->prices
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $products
+        ]);
     }
 }

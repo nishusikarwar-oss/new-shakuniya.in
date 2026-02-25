@@ -2,188 +2,131 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
-use App\Http\Resources\ProductFeatureResource;
-use App\Models\Product;
 use App\Models\ProductFeature;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
 class ProductFeatureController extends Controller
 {
     /**
-     * Display all product features.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Display a listing of product features.
      */
     public function index(Request $request)
     {
-        try {
-            $query = ProductFeature::with('product');
+        $query = ProductFeature::with('product');
 
-            // Filter by product_id
-            if ($request->has('product_id')) {
-                $query->where('product_id', $request->product_id);
-            }
-
-            // Search functionality
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where('feature', 'like', "%{$search}%");
-            }
-
-            // Sort functionality
-            $sortField = $request->get('sort_by', 'id');
-            $sortOrder = $request->get('sort_order', 'asc');
-            $query->orderBy($sortField, $sortOrder);
-
-            // Pagination
-            $perPage = $request->get('per_page', 20);
-            $perPage = min(max(1, $perPage), 100);
-
-            $features = $query->paginate($perPage);
-
-            return response()->json([
-                'success' => true,
-                'data' => $features->items(),
-                'meta' => [
-                    'total' => $features->total(),
-                    'current_page' => $features->currentPage(),
-                    'last_page' => $features->lastPage(),
-                    'per_page' => $features->perPage(),
-                    'from' => $features->firstItem(),
-                    'to' => $features->lastItem(),
-                ],
-                'message' => 'Product features retrieved successfully.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve product features.',
-                'error' => $e->getMessage()
-            ], 500);
+        // Filter by product
+        if ($request->has('product_id')) {
+            $query->forProduct($request->product_id);
         }
+
+        // Filter active only
+        if ($request->boolean('active_only')) {
+            $query->active();
+        }
+
+        // Search functionality
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Order by display order
+        $query->ordered();
+
+        $features = $query->paginate($request->get('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product features retrieved successfully',
+            'data' => $features
+        ]);
     }
 
     /**
-     * Get features by product ID.
-     * 
-     * @param  int  $productId
-     * @return \Illuminate\Http\Response
+     * Get features for a specific product.
      */
-    public function byProduct($productId)
+    public function forProduct($productId)
     {
-        try {
-            $product = Product::findOrFail($productId);
-            
-            $features = ProductFeature::where('product_id', $productId)
-                ->orderBy('id', 'asc')
-                ->get();
+        $product = Product::find($productId);
 
-            return response()->json([
-                'success' => true,
-                'data' => ProductFeatureResource::collection($features),
-                'total' => $features->count(),
-                'product_id' => (int) $productId,
-                'product_title' => $product->title,
-                'message' => 'Product features retrieved successfully.'
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        if (!$product) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found.'
+                'message' => 'Product not found'
             ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve product features.',
-                'error' => $e->getMessage()
-            ], 500);
         }
+
+        $features = ProductFeature::forProduct($productId)
+            ->active()
+            ->ordered()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product features retrieved successfully',
+            'data' => [
+                'product' => [
+                    'id' => $product->id,
+                    'title' => $product->title,
+                    'slug' => $product->slug
+                ],
+                'features' => $features
+            ]
+        ]);
     }
 
     /**
-     * Store multiple features for a product.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Get available icons list.
      */
-    public function storeBulk(Request $request)
+    public function getIcons()
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'product_id' => 'required|integer|exists:products,id',
-                'features' => 'required|array|min:1',
-                'features.*' => 'required|string|max:255',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
-                ], 422);
-            }
-
-            $features = [];
-            foreach ($request->features as $featureText) {
-                $features[] = ProductFeature::create([
-                    'product_id' => $request->product_id,
-                    'feature' => $featureText,
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => ProductFeatureResource::collection($features),
-                'message' => count($features) . ' product features created successfully.'
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create product features.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => ProductFeature::getIconOptions()
+        ]);
     }
 
     /**
-     * Store a single product feature.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Store a newly created product feature.
      */
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|string|exists:products,id',
+            'icon_name' => 'required|string|max:50|in:' . implode(',', ProductFeature::getAvailableIcons()),
+            'title' => 'required|string|max:200',
+            'description' => 'nullable|string',
+            'display_order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $validator = Validator::make($request->all(), [
-                'product_id' => 'required|integer|exists:products,id',
-                'feature' => 'required|string|max:255',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
-                ], 422);
-            }
-
-            $feature = ProductFeature::create([
-                'product_id' => $request->product_id,
-                'feature' => $request->feature,
-            ]);
+            $feature = ProductFeature::create($request->all());
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductFeatureResource($feature),
-                'message' => 'Product feature created successfully.'
+                'message' => 'Product feature created successfully',
+                'data' => $feature->load('product')
             ], 201);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create product feature.',
+                'message' => 'Failed to create product feature',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -191,9 +134,6 @@ class ProductFeatureController extends Controller
 
     /**
      * Display the specified product feature.
-     * 
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
@@ -202,29 +142,20 @@ class ProductFeatureController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductFeatureResource($feature),
-                'message' => 'Product feature retrieved successfully.'
+                'message' => 'Product feature retrieved successfully',
+                'data' => $feature
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product feature not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve product feature.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Product feature not found'
+            ], 404);
         }
     }
 
     /**
      * Update the specified product feature.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
@@ -232,52 +163,39 @@ class ProductFeatureController extends Controller
             $feature = ProductFeature::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'feature' => 'sometimes|required|string|max:255',
-                'product_id' => 'sometimes|required|integer|exists:products,id',
+                'icon_name' => 'sometimes|required|string|max:50|in:' . implode(',', ProductFeature::getAvailableIcons()),
+                'title' => 'sometimes|required|string|max:200',
+                'description' => 'nullable|string',
+                'display_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
+                    'message' => 'Validation errors',
+                    'errors' => $validator->errors()
                 ], 422);
             }
 
-            if ($request->has('feature')) {
-                $feature->feature = $request->feature;
-            }
-
-            if ($request->has('product_id')) {
-                $feature->product_id = $request->product_id;
-            }
-
-            $feature->save();
+            $feature->update($request->all());
 
             return response()->json([
                 'success' => true,
-                'data' => new ProductFeatureResource($feature),
-                'message' => 'Product feature updated successfully.'
+                'message' => 'Product feature updated successfully',
+                'data' => $feature->load('product')
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product feature not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update product feature.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Product feature not found'
+            ], 404);
         }
     }
 
     /**
      * Remove the specified product feature.
-     * 
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
@@ -287,54 +205,155 @@ class ProductFeatureController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Product feature deleted successfully.'
+                'message' => 'Product feature deleted successfully'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product feature not found.'
-            ], 404);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete product feature.',
+                'message' => 'Product feature not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Toggle active status
+     */
+    public function toggleActive($id)
+    {
+        try {
+            $feature = ProductFeature::findOrFail($id);
+            $feature->is_active = !$feature->is_active;
+            $feature->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Feature status updated successfully',
+                'is_active' => $feature->is_active
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Feature not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Reorder features for a product
+     */
+    public function reorder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|string|exists:products,id',
+            'orders' => 'required|array',
+            'orders.*.id' => 'required|string|exists:product_features,id',
+            'orders.*.display_order' => 'required|integer|min:0'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            foreach ($request->orders as $order) {
+                ProductFeature::where('id', $order['id'])
+                    ->where('product_id', $request->product_id)
+                    ->update(['display_order' => $order['display_order']]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Features reordered successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reorder features',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Delete multiple features at once.
-     * 
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Bulk delete features
      */
-    public function destroyBulk(Request $request)
+    public function bulkDelete(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'ids' => 'required|array',
+            'ids.*' => 'string|exists:product_features,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $validator = Validator::make($request->all(), [
-                'ids' => 'required|array|min:1',
-                'ids.*' => 'required|integer|exists:product_features,id',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'Validation failed.'
-                ], 422);
-            }
-
-            $count = ProductFeature::whereIn('id', $request->ids)->delete();
+            ProductFeature::whereIn('id', $request->ids)->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => $count . ' product features deleted successfully.'
+                'message' => count($request->ids) . ' features deleted successfully'
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete product features.',
+                'message' => 'Failed to delete features',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Clone features from one product to another
+     */
+    public function clone(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'from_product_id' => 'required|string|exists:products,id',
+            'to_product_id' => 'required|string|exists:products,id|different:from_product_id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $sourceFeatures = ProductFeature::where('product_id', $request->from_product_id)->get();
+            $clonedCount = 0;
+
+            foreach ($sourceFeatures as $feature) {
+                $newFeature = $feature->replicate();
+                $newFeature->product_id = $request->to_product_id;
+                $newFeature->save();
+                $clonedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$clonedCount} features cloned successfully"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to clone features',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -148,15 +148,17 @@ class ServiceController extends Controller
      * Display the specified service.
      */
     public function show($id)
-    {
-        $service = Service::with('company')->find($id);
-
+    { 
+         $service = Service::where('service_id', $id)
+                        ->orWhere('slug', $id)
+                        ->firstOrFail();
         if (!$service) {
             return response()->json([
                 'success' => false,
                 'message' => 'Service not found'
             ], 404);
         }
+
 
         return response()->json([
             'success' => true,
