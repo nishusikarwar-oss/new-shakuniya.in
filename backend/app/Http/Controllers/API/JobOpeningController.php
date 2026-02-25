@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\JobOpening;
+use App\Models\JobCategory;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -16,7 +17,7 @@ class JobOpeningController extends Controller
      */
     public function index(Request $request)
     {
-        $query = JobOpening::with('department');
+        $query = JobOpening::with('department', 'categories');
 
         // Filter active only (for frontend)
         if ($request->boolean('active_only')) {
@@ -46,6 +47,20 @@ class JobOpeningController extends Controller
         // Filter by department
         if ($request->has('department_id')) {
             $query->inDepartment($request->department_id);
+        }
+
+        // Filter by category
+        if ($request->has('category_id')) {
+            $query->whereHas('categories', function($q) use ($request) {
+                $q->where('job_categories.id', $request->category_id);
+            });
+        }
+
+        // Filter by category slug
+        if ($request->has('category_slug')) {
+            $query->whereHas('categories', function($q) use ($request) {
+                $q->where('job_categories.slug', $request->category_slug);
+            });
         }
 
         // Filter by experience
@@ -102,6 +117,11 @@ class JobOpeningController extends Controller
             ->orderBy('name')
             ->get();
 
+        $categories = JobCategory::active()
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
         $experienceLevels = [
             ['min' => 0, 'max' => 1, 'label' => 'Fresher (0-1 years)'],
             ['min' => 1, 'max' => 3, 'label' => 'Junior (1-3 years)'],
@@ -117,6 +137,7 @@ class JobOpeningController extends Controller
                 'employment_types' => $employmentTypes,
                 'work_types' => $workTypes,
                 'departments' => $departments,
+                'categories' => $categories,
                 'experience_levels' => $experienceLevels
             ]
         ]);
@@ -127,7 +148,7 @@ class JobOpeningController extends Controller
      */
     public function findBySlug($slug)
     {
-        $job = JobOpening::with('department')
+        $job = JobOpening::with('department', 'categories')
             ->where('slug', $slug)
             ->first();
 
@@ -148,7 +169,7 @@ class JobOpeningController extends Controller
     }
 
     /**
-     * Store a newly created job opening.
+     * Store a newly created job opening with categories.
      */
     public function store(Request $request)
     {
@@ -164,6 +185,8 @@ class JobOpeningController extends Controller
             'qualification' => 'nullable|string',
             'location' => 'required|string|max:255',
             'department_id' => 'nullable|integer|exists:departments,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:job_categories,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract,internship',
             'work_type' => 'nullable|in:onsite,remote,hybrid',
             'salary_range' => 'nullable|string|max:100',
@@ -186,7 +209,7 @@ class JobOpeningController extends Controller
             ], 422);
         }
 
-        $data = $request->all();
+        $data = $request->except(['category_ids']);
 
         // Generate slug if not provided
         if (empty($data['slug'])) {
@@ -206,10 +229,15 @@ class JobOpeningController extends Controller
 
         $job = JobOpening::create($data);
 
+        // Attach categories if provided
+        if ($request->has('category_ids')) {
+            $job->categories()->attach($request->category_ids);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Job opening created successfully',
-            'data' => $job->load('department')
+            'data' => $job->load('department', 'categories')
         ], 201);
     }
 
@@ -218,7 +246,7 @@ class JobOpeningController extends Controller
      */
     public function show($id)
     {
-        $job = JobOpening::with('department')->find($id);
+        $job = JobOpening::with('department', 'categories')->find($id);
 
         if (!$job) {
             return response()->json([
@@ -234,7 +262,7 @@ class JobOpeningController extends Controller
     }
 
     /**
-     * Update the specified job opening.
+     * Update the specified job opening with categories.
      */
     public function update(Request $request, $id)
     {
@@ -259,6 +287,8 @@ class JobOpeningController extends Controller
             'qualification' => 'nullable|string',
             'location' => 'sometimes|required|string|max:255',
             'department_id' => 'nullable|integer|exists:departments,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:job_categories,id',
             'employment_type' => 'nullable|in:full-time,part-time,contract,internship',
             'work_type' => 'nullable|in:onsite,remote,hybrid',
             'salary_range' => 'nullable|string|max:100',
@@ -281,7 +311,7 @@ class JobOpeningController extends Controller
             ], 422);
         }
 
-        $data = $request->all();
+        $data = $request->except(['category_ids']);
 
         // Convert arrays to JSON
         if (isset($data['responsibilities']) && is_array($data['responsibilities'])) {
@@ -296,10 +326,15 @@ class JobOpeningController extends Controller
 
         $job->update($data);
 
+        // Sync categories if provided
+        if ($request->has('category_ids')) {
+            $job->categories()->sync($request->category_ids);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Job opening updated successfully',
-            'data' => $job->load('department')
+            'data' => $job->load('department', 'categories')
         ]);
     }
 
@@ -317,6 +352,9 @@ class JobOpeningController extends Controller
             ], 404);
         }
 
+        // Detach all categories first
+        $job->categories()->detach();
+        
         $job->delete();
 
         return response()->json([
@@ -390,6 +428,14 @@ class JobOpeningController extends Controller
             ], 422);
         }
 
+        // Detach all categories for these jobs
+        foreach ($request->ids as $jobId) {
+            $job = JobOpening::find($jobId);
+            if ($job) {
+                $job->categories()->detach();
+            }
+        }
+
         JobOpening::whereIn('id', $request->ids)->delete();
 
         return response()->json([
@@ -421,6 +467,14 @@ class JobOpeningController extends Controller
             ->groupBy('work_type')
             ->get();
 
+        $byCategory = JobCategory::withCount(['jobs' => function($query) {
+                $query->where('is_active', true);
+            }])
+            ->having('jobs_count', '>', 0)
+            ->orderBy('jobs_count', 'desc')
+            ->limit(5)
+            ->get();
+
         $topLocations = JobOpening::active()
             ->select('location')
             ->selectRaw('count(*) as total')
@@ -438,6 +492,7 @@ class JobOpeningController extends Controller
                 'expired' => $expired,
                 'by_employment_type' => $byEmploymentType,
                 'by_work_type' => $byWorkType,
+                'by_category' => $byCategory,
                 'top_locations' => $topLocations
             ]
         ]);
@@ -448,7 +503,7 @@ class JobOpeningController extends Controller
      */
     public function duplicate($id)
     {
-        $job = JobOpening::find($id);
+        $job = JobOpening::with('categories')->find($id);
 
         if (!$job) {
             return response()->json([
@@ -467,10 +522,139 @@ class JobOpeningController extends Controller
         $newJob->updated_at = now();
         $newJob->save();
 
+        // Copy categories
+        if ($job->categories->count() > 0) {
+            $categoryIds = $job->categories->pluck('id')->toArray();
+            $newJob->categories()->attach($categoryIds);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Job duplicated successfully',
-            'data' => $newJob->load('department')
+            'data' => $newJob->load('department', 'categories')
+        ]);
+    }
+
+    /**
+     * Get jobs by multiple categories
+     */
+    public function getByCategories(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'category_ids' => 'required|array',
+            'category_ids.*' => 'integer|exists:job_categories,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $jobs = JobOpening::whereHas('categories', function($query) use ($request) {
+            $query->whereIn('job_categories.id', $request->category_ids);
+        })
+        ->where('is_active', true)
+        ->with('categories', 'department')
+        ->orderBy('priority', 'desc')
+        ->orderBy('created_at', 'desc')
+        ->paginate($request->get('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'data' => $jobs
+        ]);
+    }
+
+    /**
+     * Add category to job
+     */
+    public function addCategory(Request $request, $id)
+    {
+        $job = JobOpening::find($id);
+
+        if (!$job) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Job not found'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required|integer|exists:job_categories,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if already attached
+        if ($job->categories()->where('category_id', $request->category_id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category already attached to this job'
+            ], 400);
+        }
+
+        $job->categories()->attach($request->category_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category added to job successfully',
+            'data' => $job->load('categories')
+        ]);
+    }
+
+    /**
+     * Remove category from job
+     */
+    public function removeCategory(Request $request, $id)
+    {
+        $job = JobOpening::find($id);
+
+        if (!$job) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Job not found'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required|integer|exists:job_categories,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $job->categories()->detach($request->category_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category removed from job successfully',
+            'data' => $job->load('categories')
+        ]);
+    }
+
+    /**
+     * Get jobs count by category
+     */
+    public function getJobsCountByCategory()
+    {
+        $categories = JobCategory::withCount(['jobs' => function($query) {
+            $query->where('is_active', true);
+        }])->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $categories
         ]);
     }
 }

@@ -95,6 +95,38 @@ class JobOpening extends Model
     }
 
     /**
+     * The categories that belong to the job (Many-to-Many relationship)
+     */
+    public function categories()
+    {
+        return $this->belongsToMany(JobCategory::class, 'job_category_mapping', 'job_id', 'category_id');
+    }
+
+    /**
+     * Get category names as comma separated string
+     */
+    public function getCategoryNamesAttribute(): string
+    {
+        return $this->categories->pluck('name')->implode(', ');
+    }
+
+    /**
+     * Get category ids array
+     */
+    public function getCategoryIdsAttribute(): array
+    {
+        return $this->categories->pluck('id')->toArray();
+    }
+
+    /**
+     * Sync categories for a job
+     */
+    public function syncCategories(array $categoryIds)
+    {
+        return $this->categories()->sync($categoryIds);
+    }
+
+    /**
      * Get formatted experience range
      */
     public function getExperienceRangeAttribute(): string
@@ -139,22 +171,6 @@ class JobOpening extends Model
         }
         
         return now()->diffInDays($this->application_deadline, false);
-    }
-
-    /**
-     * Get formatted salary range
-     */
-    public function getFormattedSalaryAttribute(): string
-    {
-        return $this->salary_range ?? 'Not Disclosed';
-    }
-
-    /**
-     * Get application URL
-     */
-    public function getApplicationUrlAttribute(): string
-    {
-        return route('jobs.apply', $this->slug);
     }
 
     /**

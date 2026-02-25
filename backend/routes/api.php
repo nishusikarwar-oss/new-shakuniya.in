@@ -6,7 +6,6 @@ use App\Http\Controllers\API\CategoryController;
 use App\Http\Controllers\API\GalleryImageController;
 use App\Http\Controllers\API\JobApplicationController;
 use App\Http\Controllers\API\JobOpeningController;
-use App\Http\Controllers\API\PerkController;
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ProductFeatureController;
 use App\Http\Controllers\API\ServiceController ;
@@ -14,6 +13,7 @@ use App\Http\Controllers\API\ServiceFeatureController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\API\ApplicationStatusHistoryController;
 use App\Http\Controllers\Api\EmailMessageController;
 use App\Http\Controllers\Api\EmailStatisticController;
 use App\Http\Controllers\Api\EmailOpenController;
@@ -31,7 +31,18 @@ use App\Http\Controllers\API\SiteSettingController;
 use App\Http\Controllers\API\NewsletterSubscriberController;
 use App\Http\Controllers\API\PortfolioProjectController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\CareerSettingController;
 use App\Http\Controllers\API\DepartmentController;
+use App\Http\Controllers\API\InterviewScheduleController;
+use App\Http\Controllers\API\JobAlertController;
+use App\Http\Controllers\API\JobCategoryController;
+use App\Http\Controllers\API\PerkBenefitController;
+use App\Http\Controllers\API\LocationController;
+use App\Http\Controllers\API\ProductImageController;
+use App\Http\Controllers\API\ProductPricingTierController;
+use App\Http\Controllers\API\RelatedProductController;
+use App\Http\Controllers\API\TierFeatureController;
+use App\Http\Controllers\API\CategorysController;
 use Symfony\Component\HttpFoundation\Request;
 
 /*
@@ -40,7 +51,7 @@ use Symfony\Component\HttpFoundation\Request;
 |--------------------------------------------------------------------------
 */
 
-// ✅ PUBLIC ROUTES - SAHI TARIKA
+// ✅ PUBLIC ROUTES 
 Route::prefix('blogs')->group(function() {  // 👈 NORMAL PARENTHESES
     Route::get('/', [BlogController::class, 'index']);      // GET /api/blogs
     Route::get('/search', [BlogController::class, 'search']); // GET /api/blogs/search
@@ -95,91 +106,6 @@ Route::prefix('gallery-images')->group(function() {
         Route::delete('/{id}', [GalleryImageController::class, 'destroy']); // DELETE /api/gallery-images/1
     });
 });
-
-
-// ------------------------------job_application--------------------------------------------------------
-//  JOB APPLICATION ROUTES
-Route::prefix('job-applications')->group(function() {
-    // ✅ SAB ROUTES PUBLIC KARO - ABHI KE LIYE
-    Route::post('/', [JobApplicationController::class, 'store']);
-    Route::get('/', [JobApplicationController::class, 'index']);
-    Route::get('/job/{jobId}', [JobApplicationController::class, 'byJob']);
-    Route::get('/{id}', [JobApplicationController::class, 'show']);
-    Route::get('/{id}/download-cv', [JobApplicationController::class, 'downloadCV']);
-    Route::put('/{id}', [JobApplicationController::class, 'update']);
-    Route::delete('/{id}', [JobApplicationController::class, 'destroy']);
-});
-
-
-// -----------------------------job opening-----------------------------
-
-//  JOB OPENINGS ROUTES - PUBLIC
-Route::prefix('job-openings')->group(function() {
-    
-
-    // Route::post('/', [JobOpeningController::class, 'index']);
-    Route::get('/', [JobOpeningController::class, 'index']);
-    Route::get('/recent', [JobOpeningController::class, 'recent']);
-    Route::get('/locations', [JobOpeningController::class, 'locations']);
-    Route::get('/{id}', [JobOpeningController::class, 'show']);
-    
-    
-    // Admin routes - protected
-    Route::middleware('auth:sanctum')->group(function() {
-        Route::post('/', [JobOpeningController::class, 'store']);
-        Route::put('/{id}', [JobOpeningController::class, 'update']);
-        Route::delete('/{id}', [JobOpeningController::class, 'destroy']);
-    });
-});
-// --------------------------------------------------------------------
-// ✅ PERKS ROUTES - PUBLIC
-Route::prefix('perks')->group(function() {
-    Route::get('/', [PerkController::class, 'index']);        // Paginated perks
-    Route::get('/all', [PerkController::class, 'all']);       // All perks without pagination
-    Route::get('/recent', [PerkController::class, 'recent']); // Recent perks
-    Route::get('/{id}', [PerkController::class, 'show']);     // Single perk
-    
-    // Admin routes - Protected
-    Route::middleware('auth:sanctum')->group(function() {
-        Route::post('/', [PerkController::class, 'store']);      // Create perk
-        Route::put('/{id}', [PerkController::class, 'update']);  // Update perk
-        Route::delete('/{id}', [PerkController::class, 'destroy']); // Delete perk
-    });
-});
-// -------------------------------------------------------------------------------------------------
-// ✅ PRODUCTS ROUTES - PUBLIC
-Route::prefix('products')->group(function() {
-    Route::get('/', [ProductController::class, 'index']);           // Paginated products
-    Route::get('/all', [ProductController::class, 'all']);          // All products
-    Route::get('/recent', [ProductController::class, 'recent']);    // Recent products
-    Route::get('/slug/{slug}', [ProductController::class, 'bySlug']); // By slug
-    Route::get('/{identifier}', [ProductController::class, 'show']);   // By ID or slug
-    
-    // Admin routes - Protected
-    Route::middleware('auth:sanctum')->group(function() {
-        Route::post('/', [ProductController::class, 'store']);      // Create product
-        Route::put('/{id}', [ProductController::class, 'update']);  // Update product
-        Route::delete('/{id}', [ProductController::class, 'destroy']); // Delete product
-    });
-});
-// --------------------------------------------------------------------------
-// ✅ PRODUCT FEATURES ROUTES - PUBLIC (READ ONLY)
-Route::prefix('product-features')->group(function() {
-    // Public routes
-    Route::get('/', [ProductFeatureController::class, 'index']);              // All features
-    Route::get('/product/{productId}', [ProductFeatureController::class, 'byProduct']); // By product
-    Route::get('/{id}', [ProductFeatureController::class, 'show']);           // Single feature
-    
-    // Admin routes - Protected
-    Route::middleware('auth:sanctum')->group(function() {
-        Route::post('/', [ProductFeatureController::class, 'store']);              // Create single
-        Route::post('/bulk', [ProductFeatureController::class, 'storeBulk']);      // Create multiple
-        Route::put('/{id}', [ProductFeatureController::class, 'update']);          // Update
-        Route::delete('/{id}', [ProductFeatureController::class, 'destroy']);      // Delete single
-        Route::post('/delete-bulk', [ProductFeatureController::class, 'destroyBulk']); // Delete multiple
-    });
-});
-// --------------------------------------------------------------------------------------------------------------------?
 
 // -------------------------------------------------------------------------------------------------------------
 // Public FAQ routes
@@ -304,7 +230,7 @@ Route::prefix('v1')->group(function () {
     
     // Services routes
     Route::get('services', [ServiceController::class, 'index']);
-    Route::get('services/slug/{slug}', [ServiceController::class, 'findBySlug']);
+    // Route::get('services/slug/{slug}', [ServiceController::class, 'findBySlug']);
     Route::get('services/{id}', [ServiceController::class, 'show']);
     
     // Service Features routes
@@ -484,20 +410,304 @@ Route::prefix('v1')->group(function () {
         Route::patch('portfolio/{id}/toggle-active', [PortfolioProjectController::class, 'toggleActive']);
     });
 // ---------------------------------------------------------------------------------------------------------------------
-                            //  carrer
-   // Department public routes
-    Route::get('/departments', [DepartmentController::class, 'index']);
-    Route::get('/departments/options', [DepartmentController::class, 'getOptions']);
-    Route::get('/departments/slug/{slug}', [DepartmentController::class, 'findBySlug']);
-    Route::get('/departments/stats', [DepartmentController::class, 'stats']);
-    Route::get('/departments/{id}', [DepartmentController::class, 'show']);
-        
-        // Department admin routes
-        Route::post('/departments', [DepartmentController::class, 'store']);
-        Route::put('/departments/{id}', [DepartmentController::class, 'update']);
-        Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
-        Route::patch('/departments/{id}/toggle-active', [DepartmentController::class, 'toggleActive']);
-        Route::post('/departments/bulk-delete', [DepartmentController::class, 'bulkDelete']);
-        
-        
+                            //  carrer  // Auth routes
+   // ========== PUBLIC ROUTES (No Auth Required) ==========
+       
+  
+// Public routes
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
+// Job Alerts public routes
+Route::post('/job-alerts', [JobAlertController::class, 'store']);
+Route::post('/job-alerts/unsubscribe', [JobAlertController::class, 'unsubscribe']);
+Route::get('/job-alerts/options', [JobAlertController::class, 'getOptions']);
+Route::get('/job-alerts/email/{email}', [JobAlertController::class, 'findByEmail']);
+
+// Department public routes
+Route::get('/departments', [DepartmentController::class, 'index']);
+Route::get('/departments/options', [DepartmentController::class, 'getOptions']);
+Route::get('/departments/slug/{slug}', [DepartmentController::class, 'findBySlug']);
+Route::get('/departments/stats', [DepartmentController::class, 'stats']);
+Route::get('/departments/{id}', [DepartmentController::class, 'show']);
+
+// Job Categories public routes
+Route::get('/job-categories', [JobCategoryController::class, 'index']);
+Route::get('/job-categories/options', [JobCategoryController::class, 'getOptions']);
+Route::get('/job-categories/popular', [JobCategoryController::class, 'getPopular']);
+Route::get('/job-categories/stats', [JobCategoryController::class, 'stats']);
+Route::get('/job-categories/slug/{slug}', [JobCategoryController::class, 'findBySlug']);
+Route::get('/job-categories/with-counts', [JobOpeningController::class, 'getJobsCountByCategory']);
+Route::get('/job-categories/{id}', [JobCategoryController::class, 'show']);
+
+// Job Openings public routes
+Route::get('/jobs', [JobOpeningController::class, 'index']);
+Route::get('/jobs/filters', [JobOpeningController::class, 'index'])->defaults('get_filters', true);
+Route::get('/jobs/stats', [JobOpeningController::class, 'stats']);
+Route::get('/jobs/slug/{slug}', [JobOpeningController::class, 'findBySlug']);
+Route::get('/jobs/{id}', [JobOpeningController::class, 'show']);
+
+// Job Applications public routes
+Route::post('/jobs/apply', [JobApplicationController::class, 'store']);
+Route::post('/jobs/check-application', [JobApplicationController::class, 'checkApplication']);
+
+// Perks & Benefits public routes
+Route::get('/perks', [PerkBenefitController::class, 'index']);
+Route::get('/perks/categories', [PerkBenefitController::class, 'getCategories']);
+Route::get('/perks/grouped', [PerkBenefitController::class, 'index'])->defaults('grouped', true);
+Route::get('/perks/stats', [PerkBenefitController::class, 'stats']);
+Route::get('/perks/{id}', [PerkBenefitController::class, 'show']);
+
+// Locations public routes
+Route::get('/locations', [LocationController::class, 'index']);
+Route::get('/locations/options', [LocationController::class, 'getOptions']);
+Route::get('/locations/countries', [LocationController::class, 'index'])->defaults('countries_only', true);
+Route::get('/locations/states', [LocationController::class, 'index'])->defaults('states_only', true);
+Route::get('/locations/grouped', [LocationController::class, 'index'])->defaults('grouped', true);
+Route::get('/locations/stats', [LocationController::class, 'stats']);
+Route::get('/locations/{id}', [LocationController::class, 'show']);
+
+// ========== PROTECTED ROUTES (Auth Required) ==========
+Route::middleware('auth:sanctum')->group(function () {
     
+    // Auth routes (protected)
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
+    
+    // Job Alerts admin routes
+    Route::get('/job-alerts', [JobAlertController::class, 'index']);
+    Route::get('/job-alerts/stats', [JobAlertController::class, 'stats']);
+    Route::get('/job-alerts/{id}', [JobAlertController::class, 'show']);
+    Route::get('/job-alerts/{id}/matching-jobs', [JobAlertController::class, 'getMatchingJobs']);
+    Route::put('/job-alerts/{id}', [JobAlertController::class, 'update']);
+    Route::post('/job-alerts/send/{frequency}', [JobAlertController::class, 'sendAlerts']);
+    Route::post('/job-alerts/{id}/unsubscribe', [JobAlertController::class, 'unsubscribeById']);
+    Route::delete('/job-alerts/{id}', [JobAlertController::class, 'destroy']);
+    Route::post('/job-alerts/bulk-delete', [JobAlertController::class, 'bulkDelete']);
+    
+    // Department admin routes
+    Route::post('/departments', [DepartmentController::class, 'store']);
+    Route::put('/departments/{id}', [DepartmentController::class, 'update']);
+    Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
+    Route::patch('/departments/{id}/toggle-active', [DepartmentController::class, 'toggleActive']);
+    Route::post('/departments/bulk-delete', [DepartmentController::class, 'bulkDelete']);
+    
+    // Job Categories admin routes
+    Route::post('/job-categories', [JobCategoryController::class, 'store']);
+    Route::put('/job-categories/{id}', [JobCategoryController::class, 'update']);
+    Route::delete('/job-categories/{id}', [JobCategoryController::class, 'destroy']);
+    Route::patch('/job-categories/{id}/toggle-active', [JobCategoryController::class, 'toggleActive']);
+    Route::post('/job-categories/bulk-delete', [JobCategoryController::class, 'bulkDelete']);
+    
+    // Job Openings admin routes
+    Route::post('/jobs', [JobOpeningController::class, 'store']);
+    Route::put('/jobs/{id}', [JobOpeningController::class, 'update']);
+    Route::delete('/jobs/{id}', [JobOpeningController::class, 'destroy']);
+    Route::post('/jobs/bulk-delete', [JobOpeningController::class, 'bulkDelete']);
+    Route::patch('/jobs/{id}/toggle-featured', [JobOpeningController::class, 'toggleFeatured']);
+    Route::patch('/jobs/{id}/toggle-active', [JobOpeningController::class, 'toggleActive']);
+    Route::post('/jobs/{id}/duplicate', [JobOpeningController::class, 'duplicate']);
+    
+    // Job Category Mapping routes
+    Route::post('/jobs/by-categories', [JobOpeningController::class, 'getByCategories']);
+    Route::post('/jobs/{id}/add-category', [JobOpeningController::class, 'addCategory']);
+    Route::delete('/jobs/{id}/remove-category', [JobOpeningController::class, 'removeCategory']);
+    Route::get('/jobs/categories/counts', [JobOpeningController::class, 'getJobsCountByCategory']);
+    
+    // Job Applications admin routes
+    Route::get('/applications', [JobApplicationController::class, 'index']);
+    Route::get('/applications/stats', [JobApplicationController::class, 'stats']);
+    Route::get('/applications/export', [JobApplicationController::class, 'export']);
+    Route::get('/applications/{id}', [JobApplicationController::class, 'show']);
+    Route::get('/applications/{id}/download-resume', [JobApplicationController::class, 'downloadResume']);
+    Route::put('/applications/{id}', [JobApplicationController::class, 'update']);
+    Route::patch('/applications/{id}/status', [JobApplicationController::class, 'updateStatus']);
+    Route::delete('/applications/{id}', [JobApplicationController::class, 'destroy']);
+    Route::post('/applications/bulk-delete', [JobApplicationController::class, 'bulkDelete']);
+
+    // Application Status History routes
+    Route::get('/applications/history', [ApplicationStatusHistoryController::class, 'index']);
+    Route::get('/applications/history/stats', [ApplicationStatusHistoryController::class, 'stats']);
+    Route::get('/applications/{applicationId}/history', [ApplicationStatusHistoryController::class, 'forApplication']);
+    Route::get('/applications/{applicationId}/timeline', [ApplicationStatusHistoryController::class, 'timeline']);
+    Route::get('/applications/history/{id}', [ApplicationStatusHistoryController::class, 'show']);
+    Route::post('/applications/history', [ApplicationStatusHistoryController::class, 'store']);
+    Route::put('/applications/history/{id}', [ApplicationStatusHistoryController::class, 'update']);
+    Route::delete('/applications/history/{id}', [ApplicationStatusHistoryController::class, 'destroy']);
+    Route::post('/applications/history/bulk-delete', [ApplicationStatusHistoryController::class, 'bulkDelete']);
+    
+    // Perks & Benefits admin routes
+    Route::post('/perks', [PerkBenefitController::class, 'store']);
+    Route::put('/perks/{id}', [PerkBenefitController::class, 'update']);
+    Route::delete('/perks/{id}', [PerkBenefitController::class, 'destroy']);
+    Route::post('/perks/bulk-delete', [PerkBenefitController::class, 'bulkDelete']);
+    Route::post('/perks/reorder', [PerkBenefitController::class, 'reorder']);
+    Route::patch('/perks/{id}/toggle-active', [PerkBenefitController::class, 'toggleActive']);
+    Route::post('/perks/bulk-update-category', [PerkBenefitController::class, 'bulkUpdateCategory']);
+    
+    // Locations admin routes
+    Route::post('/locations', [LocationController::class, 'store']);
+    Route::post('/locations/import', [LocationController::class, 'import']);
+    Route::put('/locations/{id}', [LocationController::class, 'update']);
+    Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
+    Route::post('/locations/bulk-delete', [LocationController::class, 'bulkDelete']);
+    Route::patch('/locations/{id}/toggle-active', [LocationController::class, 'toggleActive']);
+
+    // Interview Schedule routes (protected)
+Route::get('/interviews', [InterviewScheduleController::class, 'index']);
+Route::get('/interviews/calendar', [InterviewScheduleController::class, 'calendar']);
+Route::get('/interviews/stats', [InterviewScheduleController::class, 'stats']);
+Route::get('/interviews/application/{applicationId}', [InterviewScheduleController::class, 'forApplication']);
+Route::get('/interviews/{id}', [InterviewScheduleController::class, 'show']);
+Route::post('/interviews', [InterviewScheduleController::class, 'store']);
+Route::put('/interviews/{id}', [InterviewScheduleController::class, 'update']);
+Route::patch('/interviews/{id}/status', [InterviewScheduleController::class, 'updateStatus']);
+Route::post('/interviews/{id}/feedback', [InterviewScheduleController::class, 'addFeedback']);
+Route::post('/interviews/{id}/reschedule', [InterviewScheduleController::class, 'reschedule']);
+Route::post('/interviews/{id}/cancel', [InterviewScheduleController::class, 'cancel']);
+Route::delete('/interviews/{id}', [InterviewScheduleController::class, 'destroy']);
+
+
+
+// Career Settings public routes (read-only)
+Route::get('/career-settings/page', [CareerSettingController::class, 'getCareerPage']);
+Route::get('/career-settings/application-form', [CareerSettingController::class, 'getApplicationFormSettings']);
+Route::get('/career-settings/email-settings', [CareerSettingController::class, 'getEmailSettings']);
+Route::get('/career-settings/all', [CareerSettingController::class, 'getAll']);
+Route::get('/career-settings/key/{key}/value', [CareerSettingController::class, 'getValue']);
+Route::get('/career-settings/key/{key}', [CareerSettingController::class, 'getByKey']);
+
+// Career Settings admin routes (protected)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/career-settings', [CareerSettingController::class, 'index']);
+    Route::get('/career-settings/{id}', [CareerSettingController::class, 'show']);
+    Route::post('/career-settings', [CareerSettingController::class, 'store']);
+    Route::post('/career-settings/bulk-update', [CareerSettingController::class, 'bulkUpdate']);
+    Route::post('/career-settings/career-page', [CareerSettingController::class, 'updateCareerPage']);
+    Route::post('/career-settings/reset', [CareerSettingController::class, 'resetToDefaults']);
+    Route::put('/career-settings/{id}', [CareerSettingController::class, 'update']);
+    Route::put('/career-settings/key/{key}', [CareerSettingController::class, 'updateByKey']);
+    Route::delete('/career-settings/{id}', [CareerSettingController::class, 'destroy']);
+    Route::delete('/career-settings/key/{key}', [CareerSettingController::class, 'deleteByKey']);
+});
+});
+// ------------------------------------------------------------------------------------------------------------
+  // ========== PRODUCTS PUBLIC ROUTES ==========
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/options', [ProductController::class, 'getOptions']);
+    Route::get('/products/slug/{slug}', [ProductController::class, 'findBySlug']);
+    Route::get('/products/{id}', [ProductController::class, 'show']);
+
+    // ========== PRODUCT FEATURES PUBLIC ROUTES ==========
+    Route::get('/product-features/icons', [ProductFeatureController::class, 'getIcons']);
+    Route::get('/product-features', [ProductFeatureController::class, 'index']);
+    Route::get('/products/{productId}/features', [ProductFeatureController::class, 'forProduct']);
+    Route::get('/product-features/{id}', [ProductFeatureController::class, 'show']);
+
+    // ========== PRODUCT IMAGES PUBLIC ROUTES ==========
+    Route::get('/product-images', [ProductImageController::class, 'index']);
+    Route::get('/products/{productId}/images', [ProductImageController::class, 'forProduct']);
+    Route::get('/products/{productId}/primary-image', [ProductImageController::class, 'getPrimary']);
+    Route::get('/product-images/{id}', [ProductImageController::class, 'show']);
+
+    // ========== PRODUCT PRICING TIERS PUBLIC ROUTES ==========
+    Route::get('/pricing-tiers/billing-periods', [ProductPricingTierController::class, 'getBillingPeriods']);
+    Route::get('/pricing-tiers/tier-names', [ProductPricingTierController::class, 'getTierNames']);
+    Route::get('/pricing-tiers', [ProductPricingTierController::class, 'index']);
+    Route::get('/products/{productId}/pricing-tiers', [ProductPricingTierController::class, 'forProduct']);
+    Route::get('/products/{productId}/popular-tier', [ProductPricingTierController::class, 'getPopular']);
+    Route::get('/pricing-tiers/{id}', [ProductPricingTierController::class, 'show']);
+
+    // ========== TIER FEATURES PUBLIC ROUTES ==========
+    Route::get('/tier-features', [TierFeatureController::class, 'index']);
+    Route::get('/pricing-tiers/{tierId}/features', [TierFeatureController::class, 'forTier']);
+    Route::get('/products/{productId}/tier-comparison', [TierFeatureController::class, 'getComparison']);
+    Route::get('/tier-features/{id}', [TierFeatureController::class, 'show']);
+
+    // ========== RELATED PRODUCTS PUBLIC ROUTES ==========
+    Route::get('/related-products/types', [RelatedProductController::class, 'getTypes']);
+    Route::get('/related-products', [RelatedProductController::class, 'index']);
+    Route::get('/products/{productId}/related', [RelatedProductController::class, 'forProduct']);
+    Route::get('/products/{productId}/upsells', [RelatedProductController::class, 'getUpsells']);
+    Route::get('/products/{productId}/cross-sells', [RelatedProductController::class, 'getCrossSells']);
+    Route::get('/products/{productId}/alternatives', [RelatedProductController::class, 'getAlternatives']);
+    Route::get('/related-products/{productId}/{relatedId}', [RelatedProductController::class, 'show']);
+
+    // ========== PROTECTED ROUTES (Auth Required) ==========
+    // Route::middleware('auth:sanctum')->group(function () {
+        
+        // Product admin routes
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{id}', [ProductController::class, 'update']);
+        Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+        Route::patch('/products/{id}/toggle-active', [ProductController::class, 'toggleActive']);
+        Route::post('/products/reorder', [ProductController::class, 'reorder']);
+        Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete']);
+        
+        // Product Features admin routes
+        Route::post('/product-features', [ProductFeatureController::class, 'store']);
+        Route::put('/product-features/{id}', [ProductFeatureController::class, 'update']);
+        Route::delete('/product-features/{id}', [ProductFeatureController::class, 'destroy']);
+        Route::patch('/product-features/{id}/toggle-active', [ProductFeatureController::class, 'toggleActive']);
+        Route::post('/product-features/reorder', [ProductFeatureController::class, 'reorder']);
+        Route::post('/product-features/bulk-delete', [ProductFeatureController::class, 'bulkDelete']);
+        Route::post('/product-features/clone', [ProductFeatureController::class, 'clone']);
+        
+        // Product Images admin routes
+        Route::post('/product-images', [ProductImageController::class, 'store']);
+        Route::post('/product-images/multiple', [ProductImageController::class, 'storeMultiple']);
+        Route::put('/product-images/{id}', [ProductImageController::class, 'update']);
+        Route::delete('/product-images/{id}', [ProductImageController::class, 'destroy']);
+        Route::post('/product-images/{id}/set-primary', [ProductImageController::class, 'setPrimary']);
+        Route::post('/product-images/reorder', [ProductImageController::class, 'reorder']);
+        Route::post('/product-images/bulk-delete', [ProductImageController::class, 'bulkDelete']);
+        
+        // Product Pricing Tiers admin routes
+        Route::post('/pricing-tiers', [ProductPricingTierController::class, 'store']);
+        Route::put('/pricing-tiers/{id}', [ProductPricingTierController::class, 'update']);
+        Route::delete('/pricing-tiers/{id}', [ProductPricingTierController::class, 'destroy']);
+        Route::patch('/pricing-tiers/{id}/toggle-active', [ProductPricingTierController::class, 'toggleActive']);
+        Route::patch('/pricing-tiers/{id}/toggle-popular', [ProductPricingTierController::class, 'togglePopular']);
+        Route::post('/pricing-tiers/reorder', [ProductPricingTierController::class, 'reorder']);
+        Route::post('/pricing-tiers/bulk-delete', [ProductPricingTierController::class, 'bulkDelete']);
+        Route::post('/pricing-tiers/clone', [ProductPricingTierController::class, 'clone']);
+        
+        // Tier Features admin routes
+        Route::post('/tier-features', [TierFeatureController::class, 'store']);
+        Route::post('/tier-features/multiple', [TierFeatureController::class, 'storeMultiple']);
+        Route::put('/tier-features/{id}', [TierFeatureController::class, 'update']);
+        Route::delete('/tier-features/{id}', [TierFeatureController::class, 'destroy']);
+        Route::patch('/tier-features/{id}/toggle-availability', [TierFeatureController::class, 'toggleAvailability']);
+        Route::post('/tier-features/reorder', [TierFeatureController::class, 'reorder']);
+        Route::post('/tier-features/bulk-delete', [TierFeatureController::class, 'bulkDelete']);
+        Route::post('/tier-features/copy', [TierFeatureController::class, 'copyFromTier']);
+        
+        // Related Products admin routes
+        Route::post('/related-products', [RelatedProductController::class, 'store']);
+        Route::post('/related-products/multiple', [RelatedProductController::class, 'storeMultiple']);
+        Route::put('/related-products/{productId}/{relatedId}', [RelatedProductController::class, 'update']);
+        Route::delete('/related-products/{productId}/{relatedId}', [RelatedProductController::class, 'destroy']);
+        Route::post('/related-products/bulk-delete', [RelatedProductController::class, 'bulkDelete']);
+        Route::post('/products/{productId}/related/reorder', [RelatedProductController::class, 'reorder']);
+
+
+   // ========== PUBLIC ROUTES ==========
+    Route::get('/categories', [CategorysController::class, 'index']);
+    Route::get('/categories/tree', [CategorysController::class, 'index'])->defaults('tree', true);
+    Route::get('/categories/dropdown', [CategorysController::class, 'index'])->defaults('for_dropdown', true);
+    Route::get('/categories/slug/{slug}', [CategorysController::class, 'findBySlug']);
+    Route::get('/categories/{id}/children', [CategorysController::class, 'getChildren']);
+    Route::get('/categories/{id}/path', [CategorysController::class, 'getPath']);
+    Route::get('/categories/{id}', [CategorysController::class, 'show']);
+
+    // ========== PROTECTED ROUTES ==========
+    // Route::middleware('auth:sanctum')->group(function () {
+    //     Route::post('/categories', [CategorysController::class, 'store']);
+    //     Route::put('/categories/{id}', [CategorysController::class, 'update']);
+    //     Route::delete('/categories/{id}', [CategorysController::class, 'destroy']);
+    //     Route::patch('/categories/{id}/toggle-active', [CategorysController::class, 'toggleActive']);
+    //     Route::post('/categories/reorder', [CategorysController::class, 'reorder']);
+    //     Route::post('/categories/bulk-delete', [CategorysController::class, 'bulkDelete']);
+    //     Route::patch('/categories/{id}/move', [CategorysController::class, 'move']);
+    // });
+    // });
