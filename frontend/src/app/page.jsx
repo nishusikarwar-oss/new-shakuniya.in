@@ -5,7 +5,7 @@ import { Monitor, Smartphone, Code, Server, ShoppingCart } from "lucide-react";
 
 import { motion } from "framer-motion";
 import heroBg from "../images/hero-bg.png";
-import ServicesSection from "@/components/ServicesSection";
+// import ServicesSection from "@/components/ServicesSection";
 import AdvantagesSection from "@/components/AdvantagesSection";
 import StatsSection from "@/components/StatsSection";
 import ContactSection from "@/components/ContactSection";
@@ -141,7 +141,7 @@ const HeroSection = () => {
       </div>
     </section>
 
-      <ServicesSection/>
+      {/* <ServicesSection/> */}
       <AdvantagesSection/>
         <StatsSection/>
         <TestimonialSection/>

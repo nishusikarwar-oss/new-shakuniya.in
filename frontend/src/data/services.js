@@ -12,8 +12,8 @@ import {
 export const services = [
   {
     id: "1",
-    title: "Android Development",
-    slug: "android",
+    title: "Social media marketing",
+    slug: "social-media-marketing",
     shortDescription: "Native Android apps with cutting-edge technology",
     fullDescription:
       "We build high-performance, scalable Android applications using the latest technologies and best practices. Our team specializes in creating intuitive, user-friendly mobile experiences that drive engagement and business growth.",
@@ -29,8 +29,8 @@ export const services = [
   },
   {
     id: "2",
-    title: "iOS Development",
-    slug: "ios",
+    title: "Social Media Optimisation",
+    slug: "social-media-optimisation",
     shortDescription: "Premium iOS applications for Apple devices",
     fullDescription:
       "We create stunning iOS applications that leverage the full power of Apple's ecosystem. From iPhone to iPad, our apps deliver seamless experiences with beautiful interfaces and robust functionality.",
@@ -46,8 +46,8 @@ export const services = [
   },
   {
     id: "3",
-    title: "Website Development",
-    slug: "website",
+    title: "Pay Per Click",
+    slug: "pay-per-click",
     shortDescription: "Modern, responsive web solutions",
     fullDescription:
       "We develop modern, responsive websites that captivate users and drive conversions. From corporate sites to e-commerce platforms, we deliver web solutions that perform beautifully across all devices.",
@@ -63,8 +63,8 @@ export const services = [
   },
   {
     id: "4",
-    title: "Software Development",
-    slug: "software",
+    title: "Social Engine Optimisation",
+    slug: "seo-services",
     shortDescription: "Custom software systems tailored to your needs",
     fullDescription:
       "We design and develop custom software solutions that streamline operations and boost productivity. Our software is built to scale with your business and adapt to your evolving needs.",

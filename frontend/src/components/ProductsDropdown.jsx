@@ -2,12 +2,42 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ArrowRight } from "lucide-react";
-import { getDropdownProducts } from "@/data/products";
+import { ChevronDown, ArrowRight, Zap, MessageSquare, Users, ShieldCheck } from "lucide-react";
 
 const ProductsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownProducts = getDropdownProducts(4);
+
+  // Static products data (No API)
+  const dropdownProducts = [
+    {
+      id: 1,
+      slug: "bio-linker",
+      title: "Bio Linker",
+      shortDescription: "Centralized digital bio-link solution",
+      icon: MessageSquare,
+    },
+    {
+      id: 2,
+      slug: "ews",
+      title: "EWS",
+      shortDescription: "Unified Email, WhatsApp & SMS platform",
+      icon: Zap,
+    },
+    {
+      id: 3,
+      slug: "niya-meet",
+      title: "Niya Meet",
+      shortDescription: "Secure encrypted business meetings",
+      icon: ShieldCheck,
+    },
+    {
+      id: 4,
+      slug: "vyaparbot",
+      title: "Vyaparbot",
+      shortDescription: "AI-powered business automation bot",
+      icon: Users,
+    },
+  ];
 
   return (
     <div
@@ -20,7 +50,7 @@ const ProductsDropdown = () => {
         type="button"
         className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors duration-300 text-sm font-medium"
       >
-       Products
+        Products
         <ChevronDown
           size={14}
           className={`transition-transform duration-300 ${
@@ -42,7 +72,6 @@ const ProductsDropdown = () => {
           <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-gradient-to-br from-white/10 to-white/5 border-l border-t border-white/10" />
 
           <div className="space-y-1">
-            {/* Top 4 products */}
             {dropdownProducts.map((product) => {
               const IconComponent = product.icon;
 

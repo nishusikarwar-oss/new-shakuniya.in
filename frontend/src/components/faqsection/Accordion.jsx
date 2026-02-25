@@ -68,7 +68,7 @@ export default function Accordion() {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
-      {faqs.data.map((faq, index) => (
+      {faqs.map((faq, index) => (
         <div
           key={faq.id || index}
           className="bg-card border border-borderDark rounded-2xl transition-all duration-300"

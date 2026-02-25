@@ -1,4 +1,4 @@
-// lib/api.js (या जहाँ आपका apiClient है)
+ // lib/api.js (या जहाँ आपका apiClient है)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 console.log("🔥 API_BASE_URL from env:", API_BASE_URL);
