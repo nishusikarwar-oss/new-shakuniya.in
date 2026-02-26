@@ -7,7 +7,10 @@ use Illuminate\Support\Facades\Route;
 
 // Admin Dashboard Routes
 Route::prefix('admin')->group(function () {
-    
+    //Testing route
+    Route::get('/test', function () {
+        return response()->json(['message' => 'Admin API is working!']);
+    });
     // Main Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/stats', [DashboardController::class, 'getStatsCards']);
