@@ -50,22 +50,17 @@ use Symfony\Component\HttpFoundation\Request;
 | API Routes
 |--------------------------------------------------------------------------
 */
-
-// ✅ PUBLIC ROUTES 
-Route::prefix('blogs')->group(function() {  // 👈 NORMAL PARENTHESES
-    Route::get('/', [BlogController::class, 'index']);      // GET /api/blogs
-    Route::get('/search', [BlogController::class, 'search']); // GET /api/blogs/search
-    Route::get('/latest', [BlogController::class, 'latest']); // GET /api/blogs/latest
-    Route::get('/{identifier}', [BlogController::class, 'show']); // GET /api/blogs/1
+Route::prefix('blogs')->group(function() {
+    // Static routes pehle
+    Route::get('/', [BlogController::class, 'index']);          // GET /api/blogs
+    Route::get('/search', [BlogController::class, 'search']);   // GET /api/blogs/search
+    Route::get('/latest', [BlogController::class, 'latest']);   // GET /api/blogs/latest
+    Route::post('/', [BlogController::class, 'store']);         // POST /api/blogs
    
-});
-
-// ✅ PROTECTED ROUTES (WITH AUTH)
-Route::middleware('auth:sanctum')->prefix('blogs')->group(function() {
-    Route::post('/', [BlogController::class, 'store']);        // POST /api/blogs
-    Route::put('/{id}', [BlogController::class, 'update']);    // PUT /api/blogs/1
-    Route::delete('/{id}', [BlogController::class, 'destroy']); // DELETE /api/blogs/1
-    Route::post('/{id}/thumbnail', [BlogController::class, 'uploadThumbnail']);
+    // Dynamic routes last mein
+    Route::get('/{identifier}', [BlogController::class, 'show']); // GET /api/blogs/1
+    Route::put('/{id}', [BlogController::class, 'update']);       // PUT /api/blogs/1
+    Route::delete('/{id}', [BlogController::class, 'destroy']);   // DELETE /api/blogs/1
 });
 
 
@@ -112,23 +107,28 @@ Route::prefix('gallery-images')->group(function() {
 Route::prefix('faqs')->name('api.faqs.')->group(function () {
     
     // Public routes (no authentication required)
-    Route::get('/', [FaqController::class, 'index'])->name('index');
-    Route::get('/active', [FaqController::class, 'getActive'])->name('active');
-    Route::get('/{id}', [FaqController::class, 'show'])->name('show');
-    
-    // Protected routes (add authentication later)
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/', [FaqController::class, 'store'])->name('store');
-        Route::put('/{id}', [FaqController::class, 'update'])->name('update');
-        Route::patch('/{id}/toggle-status', [FaqController::class, 'toggleStatus'])->name('toggle-status');
-        Route::delete('/{id}', [FaqController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-delete', [FaqController::class, 'bulkDelete'])->name('bulk-delete');
+    Route::get('/', [FaqController::class, 'index'])->name('index');                    // GET /api/faqs
+    Route::get('/active', [FaqController::class, 'getActive'])->name('active');         // GET /api/faqs/active
+    Route::get('/{id}', [FaqController::class, 'show'])->name('show');                  // GET /api/faqs/1
+     Route::post('/', [FaqController::class, 'store'])->name('store');               // POST /api/faqs
+        Route::put('/{id}', [FaqController::class, 'update'])->name('update');          // PUT /api/faqs/1
+        Route::patch('/{id}/toggle-status', [FaqController::class, 'toggleStatus'])->name('toggle-status'); // PATCH /api/faqs/1/toggle-status
+        Route::delete('/{id}', [FaqController::class, 'destroy'])->name('destroy');     // DELETE /api/faqs/1
+        Route::post('/bulk-delete', [FaqController::class, 'bulkDelete'])->name('bulk-delete'); // POST /api/faqs/bulk-delete
     });
-});
-
 // ---------------------------------------------------------------------------------------
 // Public routes
-Route::apiResource('users', UserController::class);
+  // API Resource route for users
+    Route::apiResource('users', UserController::class);
+    
+    // Additional user routes
+    Route::prefix('users')->name('api.users.')->group(function () {
+        Route::get('/profile', [UserController::class, 'profile'])->name('profile');           // GET /api/users/profile
+        Route::put('/profile', [UserController::class, 'updateProfile'])->name('update-profile'); // PUT /api/users/profile
+        Route::patch('/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status'); // PATCH /api/users/1/toggle-status
+        Route::post('/bulk-delete', [UserController::class, 'bulkDelete'])->name('bulk-delete'); // POST /api/users/bulk-delete
+        Route::get('/stats', [UserController::class, 'stats'])->name('stats');                 // GET /api/users/stats
+    });
 
 
 // -------------------------------------------------------------------------------------
@@ -212,9 +212,9 @@ Route::prefix('v1')->group(function () {
 // ---------------------------------------------------------------------------------------------------------------------
    // ========== PUBLIC ROUTES (No Auth Required) ==========
     
-    // Auth routes
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
+    // // Auth routes
+    // Route::post('login', [AuthController::class, 'login']);
+    // Route::post('register', [AuthController::class, 'register']);
     
    
     
@@ -229,9 +229,26 @@ Route::prefix('v1')->group(function () {
     Route::get('companies/{id}', [CompanyController::class, 'show']);
     
     // Services routes
-    Route::get('services', [ServiceController::class, 'index']);
-    // Route::get('services/slug/{slug}', [ServiceController::class, 'findBySlug']);
-    Route::get('services/{id}', [ServiceController::class, 'show']);
+  Route::prefix('services')->name('api.services.')->group(function () {
+    // GET routes - Public
+    Route::get('/', [ServiceController::class, 'index'])->name('index');                    // GET /api/services
+    Route::get('/slug/{slug}', [ServiceController::class, 'findBySlug'])->name('slug');     // GET /api/services/slug/my-service
+    Route::get('/{id}', [ServiceController::class, 'show'])->name('show');                  // GET /api/services/1
+     // POST routes - Create
+        Route::post('/', [ServiceController::class, 'store'])->name('store');               // POST /api/services
+        
+        // PUT/PATCH routes - Update
+        Route::put('/{id}', [ServiceController::class, 'update'])->name('update');          // PUT /api/services/1
+        Route::patch('/{id}/toggle-featured', [ServiceController::class, 'toggleFeatured'])->name('toggle-featured'); // PATCH /api/services/1/toggle-featured
+        Route::patch('/{id}/toggle-active', [ServiceController::class, 'toggleActive'])->name('toggle-active'); // PATCH /api/services/1/toggle-active
+        
+        // DELETE routes - Delete
+        Route::delete('/{id}', [ServiceController::class, 'destroy'])->name('destroy');     // DELETE /api/services/1
+        Route::post('/bulk-delete', [ServiceController::class, 'bulkDelete'])->name('bulk-delete'); // POST /api/services/bulk-delete
+        
+        // POST routes - Other operations
+        Route::post('/reorder', [ServiceController::class, 'reorder'])->name('reorder');    // POST /api/services/reorder
+    });
     
     // Service Features routes
     Route::get('services/{serviceId}/features', [ServiceFeatureController::class, 'index']);
@@ -285,24 +302,24 @@ Route::prefix('v1')->group(function () {
     Route::get('portfolio/{id}', [PortfolioProjectController::class, 'show']);
 
     // ========== PROTECTED ROUTES (Auth Required) ==========
-    Route::middleware('auth:sanctum')->group(function () {
+    // Route::middleware('auth:sanctum')->group(function () {
         
-        // Auth
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::get('user', [AuthController::class, 'user']);
+    //     // Auth
+    //     Route::post('logout', [AuthController::class, 'logout']);
+    //     Route::get('user', [AuthController::class, 'user']);
         
-        // Newsletter admin routes
-        Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
-        Route::get('newsletter/subscribers/stats', [NewsletterSubscriberController::class, 'stats']);
-        Route::get('newsletter/subscribers/export', [NewsletterSubscriberController::class, 'export']);
-        Route::get('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'show']);
-        Route::get('newsletter/subscribers/email/{email}', [NewsletterSubscriberController::class, 'findByEmail']);
-        Route::put('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'update']);
-        Route::post('newsletter/subscribers/{id}/resubscribe', [NewsletterSubscriberController::class, 'resubscribe']);
-        Route::post('newsletter/subscribers/{id}/unsubscribe', [NewsletterSubscriberController::class, 'unsubscribeById']);
-        Route::delete('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'destroy']);
-        Route::post('newsletter/subscribers/bulk-delete', [NewsletterSubscriberController::class, 'bulkDelete']);
-        Route::post('newsletter/send', [NewsletterSubscriberController::class, 'sendNewsletter']);
+    //     // Newsletter admin routes
+    //     Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
+    //     Route::get('newsletter/subscribers/stats', [NewsletterSubscriberController::class, 'stats']);
+    //     Route::get('newsletter/subscribers/export', [NewsletterSubscriberController::class, 'export']);
+    //     Route::get('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'show']);
+    //     Route::get('newsletter/subscribers/email/{email}', [NewsletterSubscriberController::class, 'findByEmail']);
+    //     Route::put('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'update']);
+    //     Route::post('newsletter/subscribers/{id}/resubscribe', [NewsletterSubscriberController::class, 'resubscribe']);
+    //     Route::post('newsletter/subscribers/{id}/unsubscribe', [NewsletterSubscriberController::class, 'unsubscribeById']);
+    //     Route::delete('newsletter/subscribers/{id}', [NewsletterSubscriberController::class, 'destroy']);
+    //     Route::post('newsletter/subscribers/bulk-delete', [NewsletterSubscriberController::class, 'bulkDelete']);
+    //     Route::post('newsletter/send', [NewsletterSubscriberController::class, 'sendNewsletter']);
         
         // Company routes
         Route::post('companies', [CompanyController::class, 'store']);
@@ -408,15 +425,15 @@ Route::prefix('v1')->group(function () {
         Route::post('portfolio/reorder', [PortfolioProjectController::class, 'reorder']);
         Route::patch('portfolio/{id}/toggle-featured', [PortfolioProjectController::class, 'toggleFeatured']);
         Route::patch('portfolio/{id}/toggle-active', [PortfolioProjectController::class, 'toggleActive']);
-    });
+    // });
 // ---------------------------------------------------------------------------------------------------------------------
                             //  carrer  // Auth routes
    // ========== PUBLIC ROUTES (No Auth Required) ==========
        
   
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+// Route::post('/login', [AuthController::class, 'login']);
+// Route::post('/register', [AuthController::class, 'register']);
 
 // Job Alerts public routes
 Route::post('/job-alerts', [JobAlertController::class, 'store']);
@@ -468,22 +485,22 @@ Route::get('/locations/stats', [LocationController::class, 'stats']);
 Route::get('/locations/{id}', [LocationController::class, 'show']);
 
 // ========== PROTECTED ROUTES (Auth Required) ==========
-Route::middleware('auth:sanctum')->group(function () {
+// Route::middleware('auth:sanctum')->group(function () {
     
     // Auth routes (protected)
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']);
+    // Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::get('/user', [AuthController::class, 'user']);
     
-    // Job Alerts admin routes
-    Route::get('/job-alerts', [JobAlertController::class, 'index']);
-    Route::get('/job-alerts/stats', [JobAlertController::class, 'stats']);
-    Route::get('/job-alerts/{id}', [JobAlertController::class, 'show']);
-    Route::get('/job-alerts/{id}/matching-jobs', [JobAlertController::class, 'getMatchingJobs']);
-    Route::put('/job-alerts/{id}', [JobAlertController::class, 'update']);
-    Route::post('/job-alerts/send/{frequency}', [JobAlertController::class, 'sendAlerts']);
-    Route::post('/job-alerts/{id}/unsubscribe', [JobAlertController::class, 'unsubscribeById']);
-    Route::delete('/job-alerts/{id}', [JobAlertController::class, 'destroy']);
-    Route::post('/job-alerts/bulk-delete', [JobAlertController::class, 'bulkDelete']);
+    // // Job Alerts admin routes
+    // Route::get('/job-alerts', [JobAlertController::class, 'index']);
+    // Route::get('/job-alerts/stats', [JobAlertController::class, 'stats']);
+    // Route::get('/job-alerts/{id}', [JobAlertController::class, 'show']);
+    // Route::get('/job-alerts/{id}/matching-jobs', [JobAlertController::class, 'getMatchingJobs']);
+    // Route::put('/job-alerts/{id}', [JobAlertController::class, 'update']);
+    // Route::post('/job-alerts/send/{frequency}', [JobAlertController::class, 'sendAlerts']);
+    // Route::post('/job-alerts/{id}/unsubscribe', [JobAlertController::class, 'unsubscribeById']);
+    // Route::delete('/job-alerts/{id}', [JobAlertController::class, 'destroy']);
+    // Route::post('/job-alerts/bulk-delete', [JobAlertController::class, 'bulkDelete']);
     
     // Department admin routes
     Route::post('/departments', [DepartmentController::class, 'store']);
@@ -545,7 +562,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/perks/{id}/toggle-active', [PerkBenefitController::class, 'toggleActive']);
     Route::post('/perks/bulk-update-category', [PerkBenefitController::class, 'bulkUpdateCategory']);
     
-    // Locations admin routes
+    // // Locations admin routes
     Route::post('/locations', [LocationController::class, 'store']);
     Route::post('/locations/import', [LocationController::class, 'import']);
     Route::put('/locations/{id}', [LocationController::class, 'update']);
@@ -569,36 +586,70 @@ Route::delete('/interviews/{id}', [InterviewScheduleController::class, 'destroy'
 
 
 
-// Career Settings public routes (read-only)
-Route::get('/career-settings/page', [CareerSettingController::class, 'getCareerPage']);
-Route::get('/career-settings/application-form', [CareerSettingController::class, 'getApplicationFormSettings']);
-Route::get('/career-settings/email-settings', [CareerSettingController::class, 'getEmailSettings']);
-Route::get('/career-settings/all', [CareerSettingController::class, 'getAll']);
-Route::get('/career-settings/key/{key}/value', [CareerSettingController::class, 'getValue']);
-Route::get('/career-settings/key/{key}', [CareerSettingController::class, 'getByKey']);
+//Career Settings public routes (read-only)
 
-// Career Settings admin routes (protected)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/career-settings', [CareerSettingController::class, 'index']);
-    Route::get('/career-settings/{id}', [CareerSettingController::class, 'show']);
-    Route::post('/career-settings', [CareerSettingController::class, 'store']);
-    Route::post('/career-settings/bulk-update', [CareerSettingController::class, 'bulkUpdate']);
-    Route::post('/career-settings/career-page', [CareerSettingController::class, 'updateCareerPage']);
-    Route::post('/career-settings/reset', [CareerSettingController::class, 'resetToDefaults']);
-    Route::put('/career-settings/{id}', [CareerSettingController::class, 'update']);
-    Route::put('/career-settings/key/{key}', [CareerSettingController::class, 'updateByKey']);
-    Route::delete('/career-settings/{id}', [CareerSettingController::class, 'destroy']);
-    Route::delete('/career-settings/key/{key}', [CareerSettingController::class, 'deleteByKey']);
-});
-});
+//Public routes (no authentication required) - Read only
+Route::prefix('career-settings')->name('api.career-settings.')->group(function () {
+    // Public GET routes
+    Route::get('/page', [CareerSettingController::class, 'getCareerPage'])->name('page');                          // GET /api/career-settings/page
+    Route::get('/application-form', [CareerSettingController::class, 'getApplicationFormSettings'])->name('application-form'); // GET /api/career-settings/application-form
+    Route::get('/email-settings', [CareerSettingController::class, 'getEmailSettings'])->name('email-settings');  // GET /api/career-settings/email-settings
+    Route::get('/all', [CareerSettingController::class, 'getAll'])->name('all');                                  // GET /api/career-settings/all
+    Route::get('/key/{key}/value', [CareerSettingController::class, 'getValue'])->name('value');                  // GET /api/career-settings/key/welcome_message/value
+    Route::get('/key/{key}', [CareerSettingController::class, 'getByKey'])->name('by-key');                       // GET /api/career-settings/key/welcome_message
+      // CRUD Operations
+        Route::get('/', [CareerSettingController::class, 'index'])->name('index');                                 // GET /api/career-settings
+        Route::post('/', [CareerSettingController::class, 'store'])->name('store');                                // POST /api/career-settings
+        Route::get('/{id}', [CareerSettingController::class, 'show'])->name('show');                               // GET /api/career-settings/1
+        Route::put('/{id}', [CareerSettingController::class, 'update'])->name('update');                           // PUT /api/career-settings/1
+        Route::delete('/{id}', [CareerSettingController::class, 'destroy'])->name('destroy');                      // DELETE /api/career-settings/1
+        
+        // Special Operations
+        Route::put('/key/{key}', [CareerSettingController::class, 'updateByKey'])->name('update-by-key');         // PUT /api/career-settings/key/welcome_message
+        Route::post('/bulk-update', [CareerSettingController::class, 'bulkUpdate'])->name('bulk-update');         // POST /api/career-settings/bulk-update
+        Route::post('/update-page', [CareerSettingController::class, 'updateCareerPage'])->name('update-page');   // POST /api/career-settings/update-page
+        Route::post('/reset', [CareerSettingController::class, 'resetToDefaults'])->name('reset');                // POST /api/career-settings/reset
+        Route::delete('/key/{key}', [CareerSettingController::class, 'deleteByKey'])->name('delete-by-key');     // DELETE /api/career-settings/key/welcome_message
+    });
+// // Career Settings admin routes (protected)
+// Route::middleware('auth:sanctum')->group(function () {
+//     Route::get('/career-settings', [CareerSettingController::class, 'index']);
+//     Route::get('/career-settings/{id}', [CareerSettingController::class, 'show']);
+//     Route::post('/career-settings', [CareerSettingController::class, 'store']);
+//     Route::post('/career-settings/bulk-update', [CareerSettingController::class, 'bulkUpdate']);
+//     Route::post('/career-settings/career-page', [CareerSettingController::class, 'updateCareerPage']);
+//     Route::post('/career-settings/reset', [CareerSettingController::class, 'resetToDefaults']);
+//     Route::put('/career-settings/{id}', [CareerSettingController::class, 'update']);
+//     Route::put('/career-settings/key/{key}', [CareerSettingController::class, 'updateByKey']);
+//     Route::delete('/career-settings/{id}', [CareerSettingController::class, 'destroy']);
+//     Route::delete('/career-settings/key/{key}', [CareerSettingController::class, 'deleteByKey']);
+// });
+//});
 // ------------------------------------------------------------------------------------------------------------
   // ========== PRODUCTS PUBLIC ROUTES ==========
-    Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/products/options', [ProductController::class, 'getOptions']);
-    Route::get('/products/slug/{slug}', [ProductController::class, 'findBySlug']);
-    Route::get('/products/{id}', [ProductController::class, 'show']);
+// Public routes (no authentication required)
 
-    // ========== PRODUCT FEATURES PUBLIC ROUTES ==========
+Route::prefix('products')->name('api.products.')->group(function () {
+    // GET routes - Public
+    Route::get('/', [ProductController::class, 'index'])->name('index');                    // GET /api/products
+    Route::get('/options', [ProductController::class, 'getOptions'])->name('options');      // GET /api/products/options
+    Route::get('/slug/{slug}', [ProductController::class, 'findBySlug'])->name('slug');     // GET /api/products/slug/my-product
+    Route::get('/{id}', [ProductController::class, 'show'])->name('show');                  // GET /api/products/1
+       // POST routes - Create
+        Route::post('/', [ProductController::class, 'store'])->name('store');               // POST /api/products
+        
+        // PUT/PATCH routes - Update
+        Route::put('/{id}', [ProductController::class, 'update'])->name('update');          // PUT /api/products/1
+        Route::patch('/{id}/toggle-active', [ProductController::class, 'toggleActive'])->name('toggle-active'); // PATCH /api/products/1/toggle-active
+        
+        // DELETE routes - Delete
+        Route::delete('/{id}', [ProductController::class, 'destroy'])->name('destroy');     // DELETE /api/products/1
+        Route::post('/bulk-delete', [ProductController::class, 'bulkDelete'])->name('bulk-delete'); // POST /api/products/bulk-delete
+        
+        // POST routes - Other operations
+        Route::post('/reorder', [ProductController::class, 'reorder'])->name('reorder');    // POST /api/products/reorder
+    });     
+                   // ========== PRODUCT FEATURES PUBLIC ROUTES ==========
     Route::get('/product-features/icons', [ProductFeatureController::class, 'getIcons']);
     Route::get('/product-features', [ProductFeatureController::class, 'index']);
     Route::get('/products/{productId}/features', [ProductFeatureController::class, 'forProduct']);
