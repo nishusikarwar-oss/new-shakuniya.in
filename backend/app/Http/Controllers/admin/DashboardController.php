@@ -31,6 +31,7 @@ use App\Models\PortfolioProject;
 use App\Models\WhyChooseUsPoint;
 use App\Models\ProcessStep;
 use App\Models\Commitment;
+use App\Models\ContactMessage; 
 use App\Models\Statistic;
 use App\Models\ContactInquiry;
 use App\Models\NewsletterSubscriber;

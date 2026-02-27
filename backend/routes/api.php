@@ -43,6 +43,7 @@ use App\Http\Controllers\API\ProductPricingTierController;
 use App\Http\Controllers\API\RelatedProductController;
 use App\Http\Controllers\API\TierFeatureController;
 use App\Http\Controllers\API\CategorysController;
+use App\Http\Controllers\API\ContactMessageController;
 use Symfony\Component\HttpFoundation\Request;
 
 /*
@@ -762,3 +763,17 @@ Route::prefix('products')->name('api.products.')->group(function () {
     //     Route::patch('/categories/{id}/move', [CategorysController::class, 'move']);
     // });
     // });
+// --------------------------------------------------------------------------------------------
+
+// ===========================================
+// PUBLIC ROUTES - Form Submission
+// ===========================================
+Route::post('/contact', [ContactMessageController::class, 'store']);              // POST /api/contact
+Route::post('/contact-messages', [ContactMessageController::class, 'store']);     // POST /api/contact-messages
+ Route::get('/contact-messages', [ContactMessageController::class, 'index']);
+    Route::get('/contact-messages/stats', [ContactMessageController::class, 'stats']);//api/contact-messages
+    Route::get('/contact-messages/{id}', [ContactMessageController::class, 'show']);
+    Route::put('/contact-messages/{id}', [ContactMessageController::class, 'update']);
+    Route::patch('/contact-messages/{id}/status', [ContactMessageController::class, 'updateStatus']);
+    Route::delete('/contact-messages/{id}', [ContactMessageController::class, 'destroy']);
+    Route::post('/contact-messages/bulk-delete', [ContactMessageController::class, 'bulkDelete']);
