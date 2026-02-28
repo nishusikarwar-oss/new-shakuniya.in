@@ -285,11 +285,11 @@ Route::prefix('v1')->group(function () {
     Route::get('portfolio/{id}', [PortfolioProjectController::class, 'show']);
 
     // ========== PROTECTED ROUTES (Auth Required) ==========
-    Route::middleware('auth:sanctum')->group(function () {
+    // Route::middleware('auth:sanctum')->group(function () {
         
-        // Auth
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::get('user', [AuthController::class, 'user']);
+    //     // Auth
+    //     Route::post('logout', [AuthController::class, 'logout']);
+    //     Route::get('user', [AuthController::class, 'user']);
         
         // Newsletter admin routes
         Route::get('newsletter/subscribers', [NewsletterSubscriberController::class, 'index']);
@@ -408,7 +408,7 @@ Route::prefix('v1')->group(function () {
         Route::post('portfolio/reorder', [PortfolioProjectController::class, 'reorder']);
         Route::patch('portfolio/{id}/toggle-featured', [PortfolioProjectController::class, 'toggleFeatured']);
         Route::patch('portfolio/{id}/toggle-active', [PortfolioProjectController::class, 'toggleActive']);
-    });
+  //  });
 // ---------------------------------------------------------------------------------------------------------------------
                             //  carrer  // Auth routes
    // ========== PUBLIC ROUTES (No Auth Required) ==========
@@ -468,11 +468,11 @@ Route::get('/locations/stats', [LocationController::class, 'stats']);
 Route::get('/locations/{id}', [LocationController::class, 'show']);
 
 // ========== PROTECTED ROUTES (Auth Required) ==========
-Route::middleware('auth:sanctum')->group(function () {
+//Route::middleware('auth:sanctum')->group(function () {
     
     // Auth routes (protected)
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']);
+   // Route::post('/logout', [AuthController::class, 'logout']);
+    //Route::get('/user', [AuthController::class, 'user']);
     
     // Job Alerts admin routes
     Route::get('/job-alerts', [JobAlertController::class, 'index']);
@@ -578,7 +578,7 @@ Route::get('/career-settings/key/{key}/value', [CareerSettingController::class, 
 Route::get('/career-settings/key/{key}', [CareerSettingController::class, 'getByKey']);
 
 // Career Settings admin routes (protected)
-Route::middleware('auth:sanctum')->group(function () {
+//Route::middleware('auth:sanctum')->group(function () {
     Route::get('/career-settings', [CareerSettingController::class, 'index']);
     Route::get('/career-settings/{id}', [CareerSettingController::class, 'show']);
     Route::post('/career-settings', [CareerSettingController::class, 'store']);
@@ -589,8 +589,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/career-settings/key/{key}', [CareerSettingController::class, 'updateByKey']);
     Route::delete('/career-settings/{id}', [CareerSettingController::class, 'destroy']);
     Route::delete('/career-settings/key/{key}', [CareerSettingController::class, 'deleteByKey']);
-});
-});
+
+
 // ------------------------------------------------------------------------------------------------------------
   // ========== PRODUCTS PUBLIC ROUTES ==========
     Route::get('/products', [ProductController::class, 'index']);
@@ -691,14 +691,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/products/{productId}/related/reorder', [RelatedProductController::class, 'reorder']);
 
 
-   // ========== PUBLIC ROUTES ==========
-    Route::get('/categories', [CategorysController::class, 'index']);
-    Route::get('/categories/tree', [CategorysController::class, 'index'])->defaults('tree', true);
-    Route::get('/categories/dropdown', [CategorysController::class, 'index'])->defaults('for_dropdown', true);
-    Route::get('/categories/slug/{slug}', [CategorysController::class, 'findBySlug']);
-    Route::get('/categories/{id}/children', [CategorysController::class, 'getChildren']);
-    Route::get('/categories/{id}/path', [CategorysController::class, 'getPath']);
-    Route::get('/categories/{id}', [CategorysController::class, 'show']);
+//    // ========== PUBLIC ROUTES ==========
+//     Route::get('/categories', [CategorysController::class, 'index']);
+//     Route::get('/categories/tree', [CategorysController::class, 'index'])->defaults('tree', true);
+//     Route::get('/categories/dropdown', [CategorysController::class, 'index'])->defaults('for_dropdown', true);
+//     Route::get('/categories/slug/{slug}', [CategorysController::class, 'findBySlug']);
+//     Route::get('/categories/{id}/children', [CategorysController::class, 'getChildren']);
+//     Route::get('/categories/{id}/path', [CategorysController::class, 'getPath']);
+//     Route::get('/categories/{id}', [CategorysController::class, 'show']);
 
     // ========== PROTECTED ROUTES ==========
     // Route::middleware('auth:sanctum')->group(function () {
