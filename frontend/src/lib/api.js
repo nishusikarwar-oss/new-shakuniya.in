@@ -5,7 +5,7 @@ console.log("🔥 API_BASE_URL from env:", API_BASE_URL);
 
 class ApiClient {
   constructor() {
-    this.baseURL = API_BASE_URL;
+    this.baseURL = API_BASE_URL;    
     console.log("🔥 ApiClient baseURL:", this.baseURL);
     this.blogsCache = null;
   }

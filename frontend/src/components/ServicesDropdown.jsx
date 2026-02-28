@@ -37,9 +37,9 @@ const ServicesDropdown = () => {
             : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
       >
-        <div className="glass-card p-2 min-w-[280px] shadow-2xl shadow-[#00d9ff]/10 relative">
+        <div className="dark-glass p-2 min-w-[280px] shadow-2xl shadow-black/50 relative rounded-2xl">
           {/* Arrow indicator */}
-          <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-gradient-to-br from-white/10 to-white/5 border-l border-t border-white/10" />
+          <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#0a0a0f] border-l border-t border-white/10" />
 
           <div className="space-y-1">
             {/* Top 4 Services */}

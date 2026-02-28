@@ -15,7 +15,7 @@ const Career = () => {
         <CareerHero/>
         <PerksSection/>
         <CurrentOpenings/>
-      {/* <ApplyForm/> */}
+      <ApplyForm/>
       <Footer/>
     </div>
   );

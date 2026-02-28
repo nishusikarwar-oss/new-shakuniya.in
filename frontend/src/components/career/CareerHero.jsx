@@ -1,13 +1,46 @@
+
 'use client'
 import { Users, Briefcase, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const CareerHero = () => {
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    totalDepartments: 0,
+    totalLocations: 0
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Direct fetch calls - no API client
+      const jobsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs`);
+      const deptsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/departments`);
+      const locsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/locations`);
+      
+      const jobsData = await jobsRes.json();
+      const deptsData = await deptsRes.json();
+      const locsData = await locsRes.json();
+
+      setStats({
+        totalJobs: jobsData.data?.length || jobsData.length || 0,
+        totalDepartments: deptsData.data?.length || deptsData.length || 0,
+        totalLocations: locsData.data?.length || locsData.length || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
   return (
-    <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden bg-[#05070a]">
+    <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden bg-[#0a0a0f]">
       
       {/* Background pattern */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#05070a] via-transparent to-[#05070a]/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0f] via-transparent to-[#0a0a0f]/80" />
         <div className="absolute top-20 right-10 w-72 h-72 bg-purple-500/20 rounded-full blur-xl animate-float" />
         <div className="absolute bottom-20 left-10 w-96 h-96 bg-cyan-500/15 rounded-full blur-xl animate-float-delayed" />
       </div>
@@ -31,17 +64,33 @@ const CareerHero = () => {
 
       {/* Content */}
       <div className="container mx-auto h-[500px] px-4 lg:px-8 relative z-10 text-center pt-44 animate-fade-in-up">
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-6 tracking-tight drop-shadow-lg">
-          <span className="gradient-text">CAREER</span>
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-6 tracking-tight drop-shadow-lg text-white">
+          <span className="text-transparent animate-pulse bg-clip-text bg-gradient-to-r from-[#ff4dff] via-[#b366ff] to-[#00d9ff]">CAREER</span>
         </h1>
 
-        <h2 className="text-xl md:text-2xl font-semibold text-[#edebeb] mb-4">
+        <h2 className="text-xl md:text-2xl font-semibold text-gray-200 mb-4 uppercase tracking-widest">
           THINK CAREER PROGRESSION
         </h2>
 
-        <p className="text-[#b5b0b0] text-lg max-w-2xl mx-auto">
+        <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-6">
           It's time to take your career graph to the next level!
         </p>
+
+        {/* Dynamic Stats */}
+        <div className="flex justify-center gap-8 mt-8">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-600">{stats.totalJobs}+</div>
+            <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">Open Positions</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-cyan-600">{stats.totalDepartments}+</div>
+            <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">Departments</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-pink-600">{stats.totalLocations}+</div>
+            <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">Locations</div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -50,7 +99,7 @@ const CareerHero = () => {
 const FloatingIcon = ({ children, position, delay }) => (
   <div className={`absolute ${position} hidden md:block`}>
     <div
-      className="bg-white/10 backdrop-blur-md p-3 rounded-xl "
+      className="bg-white/10 backdrop-blur-md p-3 rounded-xl animate-float"
       style={{ animationDelay: delay }}
     >
       <div className="w-8 h-8 text-white/80">

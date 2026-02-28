@@ -1,43 +1,80 @@
+// components/ProductsDropdown.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, ArrowRight, Zap, MessageSquare, Users, ShieldCheck } from "lucide-react";
+import { ChevronDown, ArrowRight, Zap, MessageSquare, Users, ShieldCheck, HelpCircle } from "lucide-react";
+
+// Icon mapping for dynamic icons
+const IconMap = {
+  Zap: Zap,
+  MessageSquare: MessageSquare,
+  Users: Users,
+  ShieldCheck: ShieldCheck,
+  Globe: MessageSquare, // Fallback icons
+  Mail: MessageSquare,
+  Phone: MessageSquare,
+  Bot: Zap,
+  Video: Users,
+  Lock: ShieldCheck,
+};
 
 const ProductsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownProducts, setDropdownProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Static products data (No API)
-  const dropdownProducts = [
-    {
-      id: 1,
-      slug: "bio-linker",
-      title: "Bio Linker",
-      shortDescription: "Centralized digital bio-link solution",
-      icon: MessageSquare,
-    },
-    {
-      id: 2,
-      slug: "ews",
-      title: "EWS",
-      shortDescription: "Unified Email, WhatsApp & SMS platform",
-      icon: Zap,
-    },
-    {
-      id: 3,
-      slug: "niya-meet",
-      title: "Niya Meet",
-      shortDescription: "Secure encrypted business meetings",
-      icon: ShieldCheck,
-    },
-    {
-      id: 4,
-      slug: "vyaparbot",
-      title: "Vyaparbot",
-      shortDescription: "AI-powered business automation bot",
-      icon: Users,
-    },
-  ];
+  useEffect(() => {
+    fetchDropdownProducts();
+  }, []);
+
+  const fetchDropdownProducts = async () => {
+    try {
+      setLoading(true);
+      // Fetch products from API - limit 4 for dropdown
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products?limit=4`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const responseData = await response.json();
+      
+      // Handle different response formats
+      let productsArray = [];
+      
+      if (responseData.success === true && responseData.data) {
+        if (responseData.data.data && Array.isArray(responseData.data.data)) {
+          productsArray = responseData.data.data;
+        } else if (Array.isArray(responseData.data)) {
+          productsArray = responseData.data;
+        }
+      } else if (Array.isArray(responseData)) {
+        productsArray = responseData;
+      }
+      
+      // Map products to dropdown format (only first 4)
+      const mappedProducts = productsArray.slice(0, 4).map((product, index) => ({
+        id: product.id || index,
+        slug: product.slug || '',
+        title: product.title || product.name || 'Product',
+        shortDescription: product.short_description || product.description?.substring(0, 50) + '...' || 'View product details',
+        icon: IconMap[product.icon_name] || HelpCircle,
+      }));
+      
+      setDropdownProducts(mappedProducts);
+      
+    } catch (err) {
+      console.error('Error fetching dropdown products:', err);
+      setError(err.message);
+      
+      // Fallback to empty array if error
+      setDropdownProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -67,12 +104,40 @@ const ProductsDropdown = () => {
             : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
       >
-        <div className="glass-card p-2 min-w-[280px] shadow-2xl shadow-[#00d9ff]/10 relative">
+        <div className="dark-glass p-2 min-w-[280px] shadow-2xl shadow-black/50 relative rounded-2xl">
           {/* Arrow indicator */}
-          <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-gradient-to-br from-white/10 to-white/5 border-l border-t border-white/10" />
+          <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-[#0a0a0f] border-l border-t border-white/10" />
 
           <div className="space-y-1">
-            {dropdownProducts.map((product) => {
+            {/* Loading State */}
+            {loading && (
+              <div className="px-4 py-8 text-center">
+                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-xs text-muted-foreground">Loading products...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="px-4 py-6 text-center">
+                <p className="text-xs text-red-400 mb-2">Failed to load products</p>
+                <button 
+                  onClick={fetchDropdownProducts}
+                  className="text-xs text-purple-400 hover:text-purple-300 underline"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {/* Products List */}
+            {!loading && !error && dropdownProducts.length === 0 && (
+              <div className="px-4 py-6 text-center">
+                <p className="text-xs text-muted-foreground">No products available</p>
+              </div>
+            )}
+
+            {!loading && !error && dropdownProducts.map((product) => {
               const IconComponent = product.icon;
 
               return (
@@ -102,7 +167,7 @@ const ProductsDropdown = () => {
               );
             })}
 
-            {/* View More products */}
+            {/* View More products - Always visible */}
             <Link
               href="/products"
               className="flex items-center justify-between px-4 py-3 mt-2 rounded-xl bg-gradient-to-r from-purple-500/10 to-cyan-500/10 hover:from-purple-500/20 hover:to-cyan-500/20 transition-all duration-200 group border-t border-white/5"
