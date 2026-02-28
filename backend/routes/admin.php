@@ -5,18 +5,23 @@ use App\Http\Controllers\admin\DashboardController;
 
 use Illuminate\Support\Facades\Route;
 
-// Admin Dashboard Routes
-Route::prefix('admin')->group(function () {
-    
+// routes/api.php mein yeh add karein
+
+Route::prefix('admin')->name('api.admin.')->group(function () {
     // Main Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index']);
-    Route::get('/dashboard/stats', [DashboardController::class, 'getStatsCards']);
-    Route::get('/dashboard/sidebar-counts', [DashboardController::class, 'getSidebarCounts']);
-    Route::get('/dashboard/module-counts', [DashboardController::class, 'getModuleCounts']);
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Module specific stats
-    Route::get('/dashboard/users/stats', [DashboardController::class, 'getUserStats']);
-    Route::get('/dashboard/products/stats', [DashboardController::class, 'getProductStats']);
-    Route::get('/dashboard/blogs/stats', [DashboardController::class, 'getBlogStats']);
-    Route::get('/dashboard/career/stats', [DashboardController::class, 'getCareerStats']);
+    // Dashboard Stats (Fresh data)
+    Route::get('/dashboard/stats', [DashboardController::class, 'getFreshStats'])->name('dashboard.stats');
+    
+    // Module Specific Stats
+    Route::get('/dashboard/module/{module}', [DashboardController::class, 'getModuleCounts'])->name('dashboard.module');
+    
+    // Individual Stats (if needed)
+    Route::get('/dashboard/stats/users', [DashboardController::class, 'getUserStats'])->name('dashboard.stats.users');
+    Route::get('/dashboard/stats/products', [DashboardController::class, 'getProductStats'])->name('dashboard.stats.products');
+    Route::get('/dashboard/stats/services', [DashboardController::class, 'getServiceStats'])->name('dashboard.stats.services');
+    Route::get('/dashboard/stats/blogs', [DashboardController::class, 'getBlogStats'])->name('dashboard.stats.blogs');
+    Route::get('/dashboard/stats/career', [DashboardController::class, 'getCareerStats'])->name('dashboard.stats.career');
+     Route::get('/dashboard/stats/faqs', [DashboardController::class, 'getFaqStats'])->name('dashboard.stats.faqs');
 });

@@ -1,14 +1,21 @@
 <?php
 
-namespace App\Models; // <-- ADD THIS MISSING NAMESPACE
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Blog extends Model
 {
     use HasFactory;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'blogs';
 
     /**
      * The attributes that are mass assignable.
@@ -20,8 +27,14 @@ class Blog extends Model
         'slug',
         'excerpt',
         'content',
-        'thumbnail',
-        'author'
+        'featured_image',
+        'category_id',
+        'tags',
+        'status',
+        'meta_title',
+        'meta_description',
+        'author_id',
+        'published_at'
     ];
 
     /**
@@ -30,102 +43,132 @@ class Blog extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'tags' => 'array',
+        'published_at' => 'datetime',
         'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     /**
-     * Automatically generate slug from title before saving
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
      */
-    protected static function boot()
+    protected $dates = [
+        'published_at',
+        'created_at',
+        'updated_at'
+    ];
+
+    /**
+     * Get the category that owns the blog.
+     */
+    public function category(): BelongsTo
     {
-        parent::boot();
-
-        static::creating(function ($blog) {
-            if (empty($blog->slug)) {
-                $blog->slug = Str::slug($blog->title);
-            }
-        });
-
-        static::updating(function ($blog) {
-            if ($blog->isDirty('title') && empty($blog->slug)) {
-                $blog->slug = Str::slug($blog->title);
-            }
-        });
+        return $this->belongsTo(Category::class);
     }
 
     /**
-     * Get the route key for the model.
-     *
-     * @return string
+     * Get the author that owns the blog.
      */
-    public function getRouteKeyName()
+    public function author(): BelongsTo
     {
-        return 'slug';
+        return $this->belongsTo(User::class, 'author_id');
     }
 
     /**
      * Scope a query to only include published blogs.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopePublished($query)
     {
-        return $query->whereNotNull('created_at');
+        return $query->where('status', 'published')
+                     ->whereNotNull('published_at')
+                     ->where('published_at', '<=', now());
+    }
+
+    /**
+     * Scope a query to only include draft blogs.
+     */
+    public function scopeDraft($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    /**
+     * Scope a query to only include featured blogs.
+     */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
     }
 
     /**
      * Scope a query to search blogs.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $search
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeSearch($query, $search)
     {
-        return $query->where('title', 'like', "%{$search}%")
-                    ->orWhere('excerpt', 'like', "%{$search}%")
-                    ->orWhere('content', 'like', "%{$search}%")
-                    ->orWhere('author', 'like', "%{$search}%");
+        return $query->where(function($q) use ($search) {
+            $q->where('title', 'LIKE', "%{$search}%")
+              ->orWhere('content', 'LIKE', "%{$search}%")
+              ->orWhere('excerpt', 'LIKE', "%{$search}%");
+        });
     }
 
     /**
-     * Get the excerpt with a character limit.
-     *
-     * @param  int  $limit
-     * @return string
+     * Get the excerpt or generate from content.
      */
-    public function getShortExcerpt($limit = 150)
+    public function getExcerptAttribute($value)
     {
-        if (empty($this->excerpt)) {
-            return Str::limit(strip_tags($this->content), $limit);
+        if ($value) {
+            return $value;
         }
-        return Str::limit($this->excerpt, $limit);
+        
+        return substr(strip_tags($this->content), 0, 150) . '...';
     }
 
     /**
-     * Get the full URL of the thumbnail image.
-     *
-     * @return string|null
+     * Get the meta title or generate from title.
      */
-    public function getThumbnailUrlAttribute()
+    public function getMetaTitleAttribute($value)
     {
-        if ($this->thumbnail) {
-            if (filter_var($this->thumbnail, FILTER_VALIDATE_URL)) {
-                return $this->thumbnail;
-            }
-            return asset('storage/' . $this->thumbnail);
-        }
-        return null;
+        return $value ?? $this->title;
     }
 
     /**
-     * Check if the blog has a thumbnail.
-     *
-     * @return bool
+     * Get the meta description or generate from excerpt.
      */
-    public function hasThumbnail()
+    public function getMetaDescriptionAttribute($value)
     {
-        return !empty($this->thumbnail);
+        return $value ?? $this->excerpt;
+    }
+
+    /**
+     * Check if blog is published.
+     */
+    public function isPublished(): bool
+    {
+        return $this->status === 'published' && 
+               $this->published_at && 
+               $this->published_at <= now();
+    }
+
+    /**
+     * Publish the blog.
+     */
+    public function publish(): void
+    {
+        $this->status = 'published';
+        $this->published_at = now();
+        $this->save();
+    }
+
+    /**
+     * Unpublish the blog.
+     */
+    public function unpublish(): void
+    {
+        $this->status = 'draft';
+        $this->published_at = null;
+        $this->save();
     }
 }

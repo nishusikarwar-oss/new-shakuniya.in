@@ -123,7 +123,7 @@ class CareerSettingController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'setting_key' => 'required|string|max:100|unique:career_settings',
+            // 'setting_key' => 'required|string|max:100|unique:career_settings',
             'setting_value' => 'required',
             'description' => 'nullable|string'
         ]);

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
@@ -53,24 +54,31 @@ class Service extends Model
         'is_active' => true,
         'display_order' => 0
     ];
-    /**
- * Get the features for the service
- */
-public function features()
-{
-    return $this->hasMany(ServiceFeature::class, 'service_id', 'service_id')
-                ->where('is_active', true)
-                ->orderBy('display_order', 'asc');
-}
 
-/**
- * Get all features (including inactive) for admin
- */
-public function allFeatures()
-{
-    return $this->hasMany(ServiceFeature::class, 'service_id', 'service_id')
-                ->orderBy('display_order', 'asc');
-}
+    protected $appends = [
+        'gradient_classes',
+        'icon_url_full',
+        'featured_image_full'
+    ];
+
+    /**
+     * Get the features for the service
+     */
+    public function features(): HasMany
+    {
+        return $this->hasMany(ServiceFeature::class, 'service_id', 'service_id')
+                    ->where('is_active', true)
+                    ->orderBy('display_order', 'asc');
+    }
+
+    /**
+     * Get all features (including inactive) for admin
+     */
+    public function allFeatures(): HasMany
+    {
+        return $this->hasMany(ServiceFeature::class, 'service_id', 'service_id')
+                    ->orderBy('display_order', 'asc');
+    }
 
     /**
      * Get the company that owns the service
@@ -81,30 +89,65 @@ public function allFeatures()
     }
 
     /**
-     * Get the full icon URL
+     * Accessors
      */
-    public function getIconUrlAttribute($value)
+    public function getIconUrlFullAttribute(): ?string
     {
-        if ($value && !str_starts_with($value, 'http')) {
-            return asset('storage/' . $value);
+        if (!$this->icon_url) {
+            return null;
         }
-        return $value;
+        
+        if (str_starts_with($this->icon_url, 'http')) {
+            return $this->icon_url;
+        }
+        
+        return asset('storage/' . $this->icon_url);
     }
 
-    /**
-     * Get the full featured image URL
-     */
-    public function getFeaturedImageAttribute($value)
+    public function getFeaturedImageFullAttribute(): ?string
     {
-        if ($value && !str_starts_with($value, 'http')) {
-            return asset('storage/' . $value);
+        if (!$this->featured_image) {
+            return null;
         }
-        return $value;
+        
+        if (str_starts_with($this->featured_image, 'http')) {
+            return $this->featured_image;
+        }
+        
+        return asset('storage/' . $this->featured_image);
     }
 
-    /**
-     * Get gradient classes as array
-     */
+    public function getIconUrlAttribute($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+        
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
+        
+        return asset('storage/' . $value);
+    }
+
+    public function getFeaturedImageAttribute($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+        
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
+        
+        return asset('storage/' . $value);
+    }
+
+    public function getGradientClassesAttribute(): string
+    {
+        return $this->gradient_from . ' ' . $this->gradient_to;
+    }
+
     public function getGradientArrayAttribute(): array
     {
         return [
@@ -130,7 +173,85 @@ public function allFeatures()
             if ($service->isDirty('title') && !$service->isDirty('slug')) {
                 $service->slug = str()->slug($service->title);
             }
-            
         });
+
+        static::deleting(function ($service) {
+            // Delete associated features
+            $service->features()->delete();
+        });
+    }
+
+    /**
+     * Scopes
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('display_order', 'asc')
+                     ->orderBy('title', 'asc');
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function($q) use ($search) {
+            $q->where('title', 'LIKE', "%{$search}%")
+              ->orWhere('short_description', 'LIKE', "%{$search}%")
+              ->orWhere('full_description', 'LIKE', "%{$search}%")
+              ->orWhere('meta_keywords', 'LIKE', "%{$search}%");
+        });
+    }
+
+    /**
+     * Helper Methods
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active === true;
+    }
+
+    public function isFeatured(): bool
+    {
+        return $this->is_featured === true;
+    }
+
+    public function activate(): bool
+    {
+        $this->is_active = true;
+        return $this->save();
+    }
+
+    public function deactivate(): bool
+    {
+        $this->is_active = false;
+        return $this->save();
+    }
+
+    public function toggleActive(): bool
+    {
+        $this->is_active = !$this->is_active;
+        return $this->save();
+    }
+
+    public function toggleFeatured(): bool
+    {
+        $this->is_featured = !$this->is_featured;
+        return $this->save();
+    }
+
+    /**
+     * Get the route key for the model
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
     }
 }
