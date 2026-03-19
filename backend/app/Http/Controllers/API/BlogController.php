@@ -97,11 +97,12 @@ class BlogController extends Controller
                 'title' => 'required|string|max:255',
                 'content' => 'required|string',
                 'excerpt' => 'nullable|string|max:500',
-                'featured_image' => 'nullable|string|max:255',
+                // 'thumbnail' => 'nullable|string|max:255',
+                'published_at' => 'nullable|date',
                 'category_id' => 'nullable|exists:categories,id',
                 'tags' => 'nullable|array',
                 'tags.*' => 'string|max:50',
-                'status' => 'nullable|in:draft,published',
+                // 'status' => 'nullable|in:draft,published',
                 'meta_title' => 'nullable|string|max:255',
                 'meta_description' => 'nullable|string|max:500',
             ]);
@@ -122,6 +123,14 @@ class BlogController extends Controller
             if ($count > 0) {
                 $slug = $slug . '-' . ($count + 1);
             }
+            //upload thumbnail
+            if ($request->hasFile('image')) {
+                $thumbnail = $request->file('image');
+              
+                $thumbnailPath = $thumbnail->store('images', 'public');
+            } else {
+                $thumbnailPath = null;
+            }
 
             // Create blog
             $blog = Blog::create([
@@ -129,7 +138,7 @@ class BlogController extends Controller
                 'slug' => $slug,
                 'content' => $request->content,
                 'excerpt' => $request->excerpt,
-                'featured_image' => $request->featured_image,
+                'featured_image' =>  $thumbnailPath,
                 'category_id' => $request->category_id,
                 'tags' => $request->tags,
                 'status' => $request->status ?? 'draft',

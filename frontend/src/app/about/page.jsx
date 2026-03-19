@@ -8,7 +8,7 @@ import {
   Rocket,
   MessageSquare,
 } from "lucide-react";
-import aboutus from "../../images/aboutus.png";
+import aboutus from "@/images/aboutus.png";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 

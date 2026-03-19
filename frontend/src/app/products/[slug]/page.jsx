@@ -16,7 +16,7 @@ const IconMap = {
   Bot: Icons.Bot,
   Video: Icons.Video,
   Lock: Icons.Lock,
-};
+}; 
 
 async function getProductData(slug) {
   try {
@@ -194,13 +194,12 @@ async function getProductData(slug) {
       full_description: product.full_description || product.description || '',
       description: product.full_description || product.description || product.short_description || '',
       video_url: product.video_url,
-      image_url: product.image_url,
+      video_text: product.video_text,
+      image: product.image,
       meta_title: product.meta_title,
       meta_description: product.meta_description,
       meta_keywords: product.meta_keywords,
       features: featuresWithIcons,
-      images: imagesData,
-      image: imagesData.length > 0 ? imagesData[0].image_url : (product.image_url || null),
       pricingTiers: tiersWithFeatures,
       relatedProducts: relatedData
     };
@@ -209,6 +208,36 @@ async function getProductData(slug) {
     console.error('Error fetching product data:', error);
     return null;
   }
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const product = await getProductData(slug);
+  
+  if (!product) return {};
+  
+  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+  const imageUrl = product.image ? (product.image.startsWith('http') ? product.image : `${mediaBaseUrl}/${product.image}`) : null;
+
+  return {
+    title: product.meta_title || product.title,
+    description: product.meta_description || product.short_description,
+    keywords: product.meta_keywords,
+    openGraph: {
+      title: product.og_title || product.meta_title || product.title,
+      description: product.og_description || product.meta_description || product.short_description,
+      images: imageUrl ? [{ url: imageUrl }] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.twitter_title || product.meta_title || product.title,
+      description: product.twitter_description || product.meta_description || product.short_description,
+      images: imageUrl ? [imageUrl] : [],
+    },
+    alternates: {
+      canonical: product.canonical_url,
+    }
+  };
 }
 
 export async function generateStaticParams() {
@@ -249,6 +278,68 @@ export default async function ProductPage({ params }) {
     ? product.pricingTiers[0] 
     : null;
 
+  // Helper to render video
+  const renderVideo = (url) => {
+    if (!url) return null;
+
+    // YouTube
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return (
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      );
+    }
+
+    // Vimeo
+    const vimeoRegex = /vimeo\.com\/(?:video\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return (
+        <iframe
+          src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+          className="w-full h-full"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      );
+    }
+
+    // Direct MP4
+    return (
+      <video
+        src={url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        controls
+        className="w-full h-full object-cover"
+      />
+    );
+  };
+
+  // Base URL for images
+  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+
+  // Helper to render image
+  const renderImage = (path, alt) => {
+    if (!path) return <div className="text-gray-500">No image available</div>;
+    const src = path.startsWith('http') ? path : `${mediaBaseUrl}/${path}`;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+      />
+    );
+  };
+
   return (
     <>
       <Navbar />
@@ -285,7 +376,7 @@ export default async function ProductPage({ params }) {
                         {firstTier.tier_name} - Starting From
                       </p>
                       <p className="text-4xl md:text-5xl font-bold text-white tracking-tight bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-                        ${firstTier.price_usd} / ₹{firstTier.price_inv}
+                        ${firstTier.price_usd} / ₹{firstTier.price_inr}
                       </p>
                       <p className="text-sm text-purple-300/70 mt-2">
                         {firstTier.billing_period === 'monthly' ? 'per month' : 'one-time'}
@@ -298,15 +389,7 @@ export default async function ProductPage({ params }) {
               {/* Product Image */}
               <div className="relative h-full flex items-center justify-center lg:justify-end">
                 <div className="relative w-full h-96 bg-gradient-to-br from-purple-950/40 to-blue-950/40 border border-purple-500/20 rounded-3xl shadow-2xl overflow-hidden flex items-center justify-center group">
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="text-gray-500">No image available</div>
-                  )}
+                  {renderImage(product.image, product.title)}
                 </div>
               </div>
             </div>
@@ -318,15 +401,7 @@ export default async function ProductPage({ params }) {
           <div className="container mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative rounded-3xl overflow-hidden border border-purple-500/30 shadow-2xl bg-black aspect-video">
               {product.video_url ? (
-                <video
-                  src={product.video_url}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls
-                  className="w-full h-full object-cover"
-                />
+                renderVideo(product.video_url)
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-500">
                   No video available
@@ -335,6 +410,16 @@ export default async function ProductPage({ params }) {
             </div>
 
             <div className="space-y-5">
+              {/* Video Description/Text */}
+              {product.video_text && (
+                <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 shadow-xl">
+                  <h3 className="text-xl font-bold mb-4 text-white">Video Details</h3>
+                  <p className="text-gray-300 leading-relaxed italic">
+                    {product.video_text}
+                  </p>
+                </div>
+              )}
+
               {product.features && Array.isArray(product.features) && product.features.length > 0 ? (
                 product.features.map((feature, index) => {
                   const Icon = feature.icon || Icons.MessageSquare;
@@ -408,7 +493,7 @@ export default async function ProductPage({ params }) {
                         </span>
                       </p>
                       <p className="text-lg text-gray-400">
-                        ₹{tier.price_inv}
+                        ₹{tier.price_inr}
                       </p>
                     </div>
                     

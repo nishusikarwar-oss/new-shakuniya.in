@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import event2 from "@/images/event2.png"
+import event2 from "@/images/event2.png";
+
+
 
 const BlogCard = ({ blog }) => {
   const formattedDate = new Date(blog.date).toLocaleDateString("en-US", {
@@ -23,10 +25,17 @@ const BlogCard = ({ blog }) => {
       <Link href={`/blogs/${blog.slug}`} className="block">
         <div className="relative overflow-hidden aspect-[16/10]">
           <img
-            src={event2.src}
-            alt={blog.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+  src={
+    blog.featured_image
+      ? `http://127.0.0.1:8000/storage/${blog.featured_image}`
+      : event2.src
+  }
+  alt={blog.title}
+  onError={(e) => {
+                  e.currentTarget.src = event2.src; // Fallback image
+                }}
+  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+/>
 
           {/* Category */}
           <div className="absolute top-4 left-4">

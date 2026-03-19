@@ -13,9 +13,7 @@ import BlogSection from "@/components/blog/BlogSection";
 import TestimonialSection from "@/components/TestimonialSection";
 import Footer from "@/components/Footer";
 import Faq from "@/components/faqsection/Faq"
-
 import Navbar from "@/components/Navbar";
-// import Navbar from "@/components/Navbar";
 
 const services = [
   {

@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import BlogCard from "@/components/blog/BlogCard";
 import Link from "next/link";
 import { Calendar, User, ArrowLeft, Tag } from "lucide-react";
-import event2 from "@/images/event2.png"
 import apiClient from "@/lib/api"; // ✅ अपना apiClient import करें
+import event2 from "@/images/event2.png";
 
 export default function BlogDetails() {
   const { slug } = useParams();
@@ -135,7 +135,7 @@ export default function BlogDetails() {
   const displayDate = blog.created_at_formatted || formatDate(blog.created_at);
   
   // ✅ Get the correct image URL
-  const imageUrl = blog.thumbnail_url || blog.thumbnail || '/placeholder.jpg';
+  const imageUrl = blog.featured_image_url || blog.featured_image || '/placeholder.jpg';
 
   return (
     <div className="min-h-screen bg-background">
@@ -195,13 +195,15 @@ export default function BlogDetails() {
           <div className="container mx-auto px-4 lg:px-8">
             <div className="max-w-4xl mx-auto aspect-video overflow-hidden rounded-2xl">
               <img
-                src={event2.src}
+                src={ `
+http://127.0.0.1:8000/storage/`+imageUrl || event2.src}
                 alt={blog.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.target.src = '/placeholder.jpg'; // Fallback image
+                  e.currentTarget.src = event2.src; // Fallback image
                 }}
               />
+            
             </div>
           </div>
         </section>

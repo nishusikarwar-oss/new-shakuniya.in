@@ -23,83 +23,137 @@ function Contact() {
   const phoneNumber = " 81908 38230"; // +91 ke bina
   const emailAddress = "hr@shakuniya.in";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitStatus(null);
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setIsSubmitting(true);
+//     setSubmitStatus(null);
     
-    // Email aur WhatsApp dono par message bhejein
-    const messageData = {
+//     // Email aur WhatsApp dono par message bhejein
+//     const messageData = {
+//       name: formData.name,
+//       email: formData.email,
+//       message: formData.message,
+//     };
+
+//     try {
+//       // Create query string for GET request
+//       const queryParams = new URLSearchParams({
+//         name: formData.name,
+//         email: formData.email,
+//         message: formData.message
+//       }).toString();
+
+//       // API call to Laravel backend using GET
+//       const response = await fetch(`http://127.0.0.1:8000/api/contact-inquiries?${queryParams}`, {
+//         method: 'GET',
+//         headers: {
+//           'Accept': 'application/json',
+//         },
+//       });
+
+//       const data = await response.json();
+
+//       if (response.ok) {
+//         setSubmitStatus({ type: 'success', message: 'Message sent successfully!' });
+        
+//         // 1. WhatsApp par message
+//         const whatsappMessage = `*New Contact Form Submission*%0A%0A
+// *Name:* ${messageData.name}%0A
+// *Email:* ${messageData.email}%0A
+// *Message:* ${messageData.message}`;
+        
+//         const whatsappLink = `https://wa.me/${phoneNumber}?text=${whatsappMessage}`;
+        
+//         // 2. Email par message (mailto)
+//         const subject = `Contact Form Query from ${messageData.name}`;
+//         const body = `Name: ${messageData.name}%0AEmail: ${messageData.email}%0AMessage: ${messageData.message}`;
+//         const mailtoLink = `mailto:${emailAddress}?subject=${subject}&body=${body}`;
+
+//         // Dono open karein
+//         window.open(mailtoLink, '_blank');
+//         setTimeout(() => {
+//           window.open(whatsappLink, '_blank');
+//         }, 1000);
+
+//         // Clear form after successful submission
+//         setFormData({ name: "", email: "", message: "" });
+        
+//         // Clear success message after 5 seconds
+//         setTimeout(() => setSubmitStatus(null), 5000);
+//       } else {
+//         setSubmitStatus({ 
+//           type: 'error', 
+//           message: data.message || 'Failed to send message. Please try again.' 
+//         });
+//       }
+//     } catch (error) {
+//       console.error('Error submitting form:', error);
+//       setSubmitStatus({ 
+//         type: 'error', 
+//         message: 'Network error. Please check your connection and try again.' 
+//       });
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+
+//     console.log("Form submitted:", messageData);
+//   };
+
+  // Click handlers
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  setIsSubmitting(true);
+  setSubmitStatus(null);
+
+  try {
+    const payload = {
       name: formData.name,
       email: formData.email,
       message: formData.message,
     };
 
-    try {
-      // Create query string for GET request
-      const queryParams = new URLSearchParams({
-        name: formData.name,
-        email: formData.email,
-        message: formData.message
-      }).toString();
+    const response = await fetch("http://127.0.0.1:8000/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      // API call to Laravel backend using GET
-      const response = await fetch(`http://127.0.0.1:8000/api/contact-inquiries?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+    const data = await response.json();
+
+    if (response.ok) {
+      setSubmitStatus({
+        type: "success",
+        message: "Message sent successfully!",
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setSubmitStatus({ type: 'success', message: 'Message sent successfully!' });
-        
-        // 1. WhatsApp par message
-        const whatsappMessage = `*New Contact Form Submission*%0A%0A
-*Name:* ${messageData.name}%0A
-*Email:* ${messageData.email}%0A
-*Message:* ${messageData.message}`;
-        
-        const whatsappLink = `https://wa.me/${phoneNumber}?text=${whatsappMessage}`;
-        
-        // 2. Email par message (mailto)
-        const subject = `Contact Form Query from ${messageData.name}`;
-        const body = `Name: ${messageData.name}%0AEmail: ${messageData.email}%0AMessage: ${messageData.message}`;
-        const mailtoLink = `mailto:${emailAddress}?subject=${subject}&body=${body}`;
-
-        // Dono open karein
-        window.open(mailtoLink, '_blank');
-        setTimeout(() => {
-          window.open(whatsappLink, '_blank');
-        }, 1000);
-
-        // Clear form after successful submission
-        setFormData({ name: "", email: "", message: "" });
-        
-        // Clear success message after 5 seconds
-        setTimeout(() => setSubmitStatus(null), 5000);
-      } else {
-        setSubmitStatus({ 
-          type: 'error', 
-          message: data.message || 'Failed to send message. Please try again.' 
-        });
-      }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      setSubmitStatus({ 
-        type: 'error', 
-        message: 'Network error. Please check your connection and try again.' 
+      setFormData({
+        name: "",
+        email: "",
+        message: "",
       });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      setSubmitStatus({
+        type: "error",
+        message: data.message || "Failed to send message",
+      });
     }
+  } catch (error) {
+    console.error(error);
 
-    console.log("Form submitted:", messageData);
-  };
-
-  // Click handlers
+    setSubmitStatus({
+      type: "error",
+      message: "Network error",
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+  
   const handlePhoneClick = () => {
     window.location.href = `tel:+91${phoneNumber}`;
   };
@@ -256,7 +310,7 @@ function Contact() {
                   </div>
                 )}
 
-                <form action="https://formsubmit.co/hr@shakuniya.in" method="post" className="space-y-5">
+                <form  method="post" className="space-y-5">
                   <Input
                     type="text"
                     placeholder="Enter your name"
@@ -295,7 +349,7 @@ function Contact() {
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    onClick={handleSubmit}
                     className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? 'Sending...' : 'Send Now'}

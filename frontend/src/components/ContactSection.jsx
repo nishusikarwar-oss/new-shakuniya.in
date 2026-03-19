@@ -16,10 +16,51 @@ const ContactSection = () => {
     message: "",
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Form submitted:", formData);
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/contact-inquiries", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.mobile,          // mobile → phone
+        service_interest: formData.service, // service → service_interest
+        message: formData.message,
+        company: formData.company
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert("Inquiry submitted successfully!");
+
+      // reset form
+      setFormData({
+        name: "",
+        email: "",
+        mobile: "",
+        company: "",
+        service: "",
+        message: "",
+      });
+
+      console.log("Saved:", data);
+    } else {
+      console.error(data);
+      alert("Failed to submit inquiry");
+    }
+  } catch (error) {
+    console.error("API Error:", error);
+    alert("Server error");
+  }
+};
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

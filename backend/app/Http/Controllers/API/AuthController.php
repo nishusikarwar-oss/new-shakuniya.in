@@ -98,6 +98,7 @@ class AuthController extends Controller
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
+                        'role' => $user->role,
                     ],
                     'token' => $token,
                     'token_type' => 'Bearer'
@@ -108,6 +109,66 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Login failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Admin specific login
+     */
+    public function adminLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The provided credentials are incorrect.'
+                ], 401);
+            }
+
+            if ($user->role !== 'admin' && !$user->is_admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Only administrators can login here.'
+                ], 403);
+            }
+
+            $token = $user->createToken('admin_token')->plainTextToken;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Admin login successful',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                    ],
+                    'token' => $token,
+                    'token_type' => 'Bearer'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin login failed',
                 'error' => $e->getMessage()
             ], 500);
         }

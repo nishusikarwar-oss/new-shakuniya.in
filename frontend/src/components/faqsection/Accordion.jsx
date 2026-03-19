@@ -19,9 +19,9 @@ export default function Accordion() {
       console.log('API Response:', result);
       
       // IMPORTANT: FAQs ko sahi jagah se nikalna
-      if (result.success && result.data && result.data.data) {
+      if (result.success && result.data && result.data) {
         // Ye hai actual FAQs array
-        setFaqs(result.data.data);
+        setFaqs(result.data);
       } else {
         setFaqs([]);
       }

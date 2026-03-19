@@ -1,445 +1,443 @@
 "use client";
 
-import { useState } from "react";
-import CustomEditor from "@/components/CustomEditor";
+import { useState, useEffect } from "react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { blogs } from "@/lib/api";
+import CustomEditor from "../../../components/CustomEditor";
 
-export default function AddBlogPage() {
+export default function BlogsPage() {
 
-  const [thumbnail, setThumbnail] = useState(null);
-  const [featured, setFeatured] = useState(null);
+  // ── list state ─────────────────────────────
+  const [list, setList] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
 
-   const [status, setStatus] = useState("active");
-  const [ogImage, setOgImage] = useState(null);
-  const [twitterImage, setTwitterImage] = useState(null);
-  const [tab, setTab] = useState("openGraph");
+  // ── form state ─────────────────────────────
+  const [editId, setEditId] = useState(null);
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [content, setContent] = useState("");
+  const [tags, setTags] = useState("");
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDesc, setMetaDesc] = useState("");
+  const [status, setStatus] = useState("published");
 
-  const previewImage = (file) => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
+  const [featuredImage, setFeaturedImage] = useState(null); // File object
+  const [preview, setPreview] = useState(null);     // preview URL
+
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const flash = (type, text) => {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 4000);
+  };
+
+  // ── fetch blogs ─────────────────────────────
+  const fetchBlogs = async () => {
+    setLoadingList(true);
+    try {
+      const res = await blogs.list({ per_page: 50 });
+      const data = res?.data ?? [];
+      setList(Array.isArray(data) ? data : []);
+    } catch (e) {
+      flash("error", e.message);
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
+
+  // ── auto slug ─────────────────────────────
+  const handleTitleChange = (val) => {
+    setTitle(val);
+    if (!editId) {
+      const generatedSlug = val
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      setSlug(generatedSlug);
+    }
+  };
+
+  // ── image change ─────────────────────────────
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+
+    if (file) {
+      setFeaturedImage(file); // real file
+      setPreview(URL.createObjectURL(file)); // preview
+    }
+  };
+
+  // ── save blog ─────────────────────────────
+  const handleSave = async () => {
+
+    if (!title.trim()) {
+      flash("error", "Blog title is required.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+
+      const tagsArray = tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      const formData = new FormData();
+
+      formData.append("title", title);
+      formData.append("slug", slug || "");
+      formData.append("content", content);
+      formData.append("meta_title", metaTitle);
+      formData.append("meta_description", metaDesc);
+      formData.append("status", status);
+
+      // tags array
+      tagsArray.forEach((tag) => {
+        formData.append("tags[]", tag);
+      });
+
+      // image
+      if (featuredImage) {
+        formData.append("image", featuredImage);
+      }
+
+if (editId !== null) {
+
+  formData.append("_method", "PUT");
+
+  await blogs.update(editId, formData);
+
+  flash("success", "Blog updated successfully.");
+
+} else {
+
+  await blogs.create(formData);
+
+  flash("success", "Blog created successfully.");
+
+}
+
+      resetForm();
+      fetchBlogs();
+
+    } catch (e) {
+      flash("error", e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── delete ─────────────────────────────
+  const handleDelete = async (id) => {
+
+    if (!confirm("Delete this blog?")) return;
+
+    try {
+      await blogs.remove(id);
+      flash("success", "Blog deleted.");
+      fetchBlogs();
+    } catch (e) {
+      flash("error", e.message);
+    }
+  };
+
+  // ── edit ─────────────────────────────
+  const startEdit = (blog) => {
+
+    setEditId(blog.id);
+    setTitle(blog.title || "");
+    setSlug(blog.slug || "");
+    setContent(blog.content || "");
+    setTags(blog.tags || "");
+    // setPublishedAt(blog.published_at || "");
+    setMetaTitle(blog.meta_title || "");
+    setMetaDesc(blog.meta_description || "");
+    setStatus(blog.status || "published");
+
+    if (blog.image) {
+      setPreview(blog.image);
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  // ── reset form ─────────────────────────────
+  const resetForm = () => {
+
+    setEditId(null);
+    setTitle("");
+    setSlug("");
+    setContent("");
+    setTags("");
+    setMetaTitle("");
+    setMetaDesc("");
+    setStatus("published");
+
+    setFeaturedImage(null);
+    setPreview(null);
   };
 
   return (
+
     <div className="min-h-screen bg-slate-950 text-gray-200 p-6">
-      <h1 className="text-xl font-semibold mb-6 text-white">Add Blog</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT: Blog Details */}
-        <div className="lg:col-span-2 bg-slate-900 rounded-lg border border-white/10 p-5">
-          <h2 className="font-medium mb-4 text-white">Blog Details</h2>
+      <h1 className="text-xl font-semibold mb-2 text-white">
+        {editId ? "Edit Blog" : "Add Blog"}
+      </h1>
 
-          {/* Blog Title */}
-          <div className="mb-4">
-            <label className="text-sm font-medium">
-              Blog Title<span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Enter Blog Title"
-              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      <p className="text-sm text-slate-400 mb-6">
+        Admin / Blog Management
+      </p>
 
-          {/* URL Slug */}
-          <div className="mb-4">
-            <label className="text-sm font-medium">URL Slug</label>
-            <input
-              type="text"
-              placeholder="Enter URL Slug (e.g., my-blog-post)"
-              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              SEO-friendly URL. If left empty, will be generated from title.
-            </p>
-          </div>
+      {msg && (
+        <div className={`mb-4 p-3 rounded-lg text-sm ${
+          msg.type === "success"
+            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+            : "bg-red-500/20 text-red-400 border border-red-500/30"
+        }`}>
+          {msg.text}
+        </div>
+      )}
 
-          {/* Blog Description */}
-          <div className="mb-4">
-          
-        <h1 className="text-xl font-bold mb-2 mt-6 bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
-          Blog Description
-        </h1>
-      <div className="w-full max-w-5xl bg-[#111118] border border-white/10 rounded-2xl shadow-2xl">
-        <CustomEditor />
-      </div>
-          </div>
+      {/* FORM */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
-          {/* Tags */}
+        {/* LEFT */}
+        <div className="lg:col-span-2 bg-slate-900 rounded-lg border border-white/10 p-5 space-y-4">
+
           <div>
-            <label className="text-sm font-medium">
-              Tags<span className="text-red-400">*</span>
-            </label>
+            <label className="text-sm font-medium">Blog Title</label>
+
             <input
-              type="text"
-              placeholder="Enter comma separated tags"
-              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Maximum of 15 keywords. Use lowercase.
-            </p>
           </div>
+
+          <div>
+            <label className="text-sm font-medium">Slug</label>
+
+            <input
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <CustomEditor value={content} onChange={setContent} />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Tags</label>
+
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="seo, marketing, ai"
+              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2"
+            />
+          </div>
+       {/* ── SEO ──────────────────────────────────────────────────────── */}
+      <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 mb-8 space-y-4">
+        <h2 className="text-lg font-semibold text-white">SEO Metadata</h2>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-slate-300">Meta Title</label>
+          <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)}
+            placeholder="50–60 characters"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-slate-300">Meta Description</label>
+          <textarea rows={3} value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)}
+            placeholder="150–160 characters"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+
         </div>
 
-        {/* RIGHT: Blog Images */}
-        <div className="bg-slate-900 rounded-lg border border-white/10 p-5">
-          <h2 className="font-medium mb-4 text-white">Blog Images</h2>
+        {/* RIGHT */}
+        <div className="bg-slate-900 rounded-lg border border-white/10 p-5 space-y-4">
 
-          {/* Thumbnail Image */}
-          <div className="mb-6">
+          <div>
+
             <label className="text-sm font-medium">
-              Thumbnail Image{" "}
-              <span className="text-red-400">(300 × 250px)*</span>
+             Featured Image
             </label>
 
             <input
               type="file"
-              className="block mt-2 text-sm text-gray-400"
-              onChange={(e) =>
-                setThumbnail(URL.createObjectURL(e.target.files[0]))
-              }
+              accept="image/*"
+              className="block mt-2 text-sm"
+              onChange={handleImageChange}
             />
 
-            <p className="text-xs text-gray-400 mt-1">
-              Appears in blog listings
-            </p>
+            <div className="mt-3 w-40 h-28 border border-white/10 flex items-center justify-center bg-slate-950 rounded overflow-hidden">
 
-            <div className="mt-3 w-40 h-28 border border-white/10 flex items-center justify-center text-xs text-gray-500 bg-slate-950 rounded">
-              {thumbnail ? (
+              {preview ? (
                 <img
-                  src={thumbnail}
-                  className="object-cover w-full h-full rounded"
+                  src={preview}
+                  className="object-cover w-full h-full"
                 />
               ) : (
-                "IMAGE PREVIEW"
+                "PREVIEW"
               )}
+
             </div>
+
           </div>
 
-          {/* Alt Text */}
-          <div className="mb-6">
-            <label className="text-sm font-medium">Image Alt Text</label>
-            <input
-              type="text"
-              placeholder="Describe the image for accessibility"
-              className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Important for SEO & accessibility
-            </p>
-          </div>
-
-          {/* Featured Image */}
-          <div className="mb-6">
-            <label className="text-sm font-medium">
-              Featured Image{" "}
-              <span className="text-red-400">(925 × 661px)*</span>
-            </label>
-
-            <input
-              type="file"
-              className="block mt-2 text-sm text-gray-400"
-              onChange={(e) =>
-                setFeatured(URL.createObjectURL(e.target.files[0]))
-              }
-            />
-
-            <p className="text-xs text-gray-400 mt-1">
-              Appears at top of blog post
-            </p>
-
-            <div className="mt-3 w-full h-36 border border-white/10 flex items-center justify-center text-xs text-gray-500 bg-slate-950 rounded">
-              {featured ? (
-                <img
-                  src={featured}
-                  className="object-cover w-full h-full rounded"
-                />
-              ) : (
-                "IMAGE PREVIEW"
-              )}
-            </div>
-          </div>
-
-          {/* Open Graph Image */}
           <div>
+
             <label className="text-sm font-medium">
-              Open Graph Image{" "}
-              <span className="text-red-400">(1200 × 630px)</span>
+              Status
             </label>
 
-            <input type="file" className="block mt-2 text-sm text-gray-400" />
+            <div className="flex gap-4 mt-2">
+
+              {["published", "draft"].map((s) => (
+
+                <label key={s} className="flex gap-2">
+
+                  <input
+                    type="radio"
+                    checked={status === s}
+                    onChange={() => setStatus(s)}
+                  />
+
+                  {s}
+
+                </label>
+
+              ))}
+
+            </div>
+
           </div>
+
         </div>
+
       </div>
 
-      <div className="mt-8 bg-slate-900 rounded-xl shadow-xl p-6 border border-slate-800">
-    <h1 className="text-2xl font-semibold mb-6 text-white">
-      SEO Metadata
-    </h1>
+      {/* SAVE BUTTON */}
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* LEFT SIDE */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Meta Title */}
-        <div>
-          <label className="block text-sm font-medium mb-1 text-slate-300">
-            Meta Title
-          </label>
-          <input
-            type="text"
-            placeholder="Meta Title (50-60 characters)"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Recommended: 50–60 characters
-          </p>
-        </div>
+      <div className="flex justify-end gap-3 mb-12">
 
-        {/* Meta Description */}
-        <div>
-          <label className="block text-sm font-medium mb-1 text-slate-300">
-            Meta Description
-          </label>
-          <textarea
-            rows={4}
-            placeholder="Meta Description (150-160 characters)"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Recommended: 150–160 characters
-          </p>
-        </div>
+        {editId && (
+          <button
+            onClick={resetForm}
+            className="px-6 py-2 bg-slate-700 rounded"
+          >
+            Cancel
+          </button>
+        )}
 
-        {/* Meta Keywords */}
-        <div>
-          <label className="block text-sm font-medium mb-1 text-slate-300">
-            Meta Keywords
-          </label>
-          <textarea
-            rows={2}
-            placeholder="Comma separated keywords"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-indigo-600 px-8 py-2 rounded flex items-center gap-2"
+        >
 
-        {/* Canonical URL */}
-        <div>
-          <label className="block text-sm font-medium mb-1 text-slate-300">
-            Canonical URL
-          </label>
-          <input
-            type="url"
-            placeholder="https://example.com/blog-post"
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Use if this content appears on multiple URLs
-          </p>
-        </div>
+          {saving && <Loader2 size={16} className="animate-spin" />}
+
+          {editId ? "Update Blog" : "Save Blog"}
+
+        </button>
+
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="space-y-6">
-        {/* Open Graph Image */}
-        <div>
-          <label className="text-sm font-medium text-slate-300">
-            Open Graph Image
-            <span className="text-red-400"> (1200 × 630px)</span>
-          </label>
+      {/* BLOG TABLE */}
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setOgImage(e.target.files[0])}
-            className="mt-2 text-sm text-slate-400"
-          />
+      <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
 
-          <div className="mt-3 border border-slate-700 rounded-lg h-40 flex items-center justify-center bg-slate-800">
-            {ogImage ? (
-              <img
-                src={previewImage(ogImage)}
-                alt="OG Preview"
-                className="h-full object-contain"
-              />
-            ) : (
-              <span className="text-slate-500">IMAGE PREVIEW</span>
-            )}
+        <h2 className="text-lg font-semibold text-white mb-4">
+          All Blogs ({list.length})
+        </h2>
+
+        {loadingList ? (
+
+          <div className="text-center py-8">
+            Loading...
           </div>
-        </div>
 
-        {/* Twitter Image */}
-        <div>
-          <label className="text-sm font-medium text-slate-300">
-            Twitter Card Image
-            <span className="text-red-400"> (1200 × 675px)</span>
-          </label>
+        ) : (
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setTwitterImage(e.target.files[0])}
-            className="mt-2 text-sm text-slate-400"
-          />
+          <table className="w-full text-sm">
 
-          <div className="mt-3 border border-slate-700 rounded-lg h-40 flex items-center justify-center bg-slate-800">
-            {twitterImage ? (
-              <img
-                src={previewImage(twitterImage)}
-                alt="Twitter Preview"
-                className="h-full object-contain"
-              />
-            ) : (
-              <span className="text-slate-500">IMAGE PREVIEW</span>
-            )}
-          </div>
-        </div>
+            <thead className="bg-slate-800 text-center">
+              <tr>
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Title</th>
+                <th className="px-4 py-3">Slug</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
 
-        {/* Status */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-slate-300">
-            Status
-          </label>
-          <div className="flex gap-6 text-slate-300">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={status === "active"}
-                onChange={() => setStatus("active")}
-                className="accent-indigo-500"
-              />
-              Active
-            </label>
+            <tbody>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={status === "inactive"}
-                onChange={() => setStatus("inactive")}
-                className="accent-indigo-500"
-              />
-              Inactive
-            </label>
-          </div>
-        </div>
+              {list.map((blog, i) => (
+
+                <tr key={blog.id} className="text-center">
+
+                  <td className="px-4 py-3">
+                    {i + 1}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {blog.title}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {blog.slug}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {blog.status}
+                  </td>
+
+                  <td className="px-4 py-3 flex gap-2">
+
+                    <button
+                      onClick={() => startEdit(blog)}
+                      className="bg-blue-600 p-1 rounded"
+                    >
+                      <Pencil size={13} />
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(blog.id)}
+                      className="bg-red-600 p-1 rounded"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        )}
+
       </div>
-    </div>
 
-   {/* SOCIAL MEDIA & SCHEMA */}
-<div className="mt-12">
-  <h2 className="text-lg font-semibold text-white mb-4">
-    Social Media & Schema
-  </h2>
-
-  {/* Tabs */}
-  <div className="flex flex-wrap gap-2 border-b border-slate-700 mb-6">
-    {[
-      { key: "openGraph", label: "Open Graph" },
-      { key: "twitter", label: "Twitter" },
-      { key: "schema", label: "Schema Markup" },
-    ].map((item) => (
-      <button
-        key={item.key}
-        onClick={() => setTab(item.key)}
-        className={`px-4 py-2 rounded-t-lg text-sm font-medium transition
-          ${
-            tab === item.key
-              ? "bg-slate-800 text-white border border-b-0 border-slate-700"
-              : "text-slate-400 hover:text-white"
-          }`}
-      >
-        {item.label}
-      </button>
-    ))}
-  </div>
-
-  {/* Content Box */}
-  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-6">
-    {/* Open Graph */}
-    {tab === "openGraph" && (
-      <>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            OG Title
-          </label>
-          <input
-            type="text"
-            placeholder="Open Graph Title"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Title for Facebook / LinkedIn sharing
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            OG Description
-          </label>
-          <textarea
-            rows={4}
-            placeholder="Open Graph Description"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Description for Facebook / LinkedIn sharing
-          </p>
-        </div>
-      </>
-    )}
-
-    {/* Twitter */}
-    {tab === "twitter" && (
-      <>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            Twitter Title
-          </label>
-          <input
-            type="text"
-            placeholder="Twitter Card Title"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            Twitter Description
-          </label>
-          <textarea
-            rows={4}
-            placeholder="Twitter Card Description"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </>
-    )}
-
-    {/* Schema */}
-    {tab === "schema" && (
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1">
-          Schema Markup (JSON-LD)
-        </label>
-        <textarea
-          rows={6}
-          placeholder='{
-  "@context": "https://schema.org",
-  "@type": "Article"
-}'
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 font-mono text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </div>
-    )}
-  </div>
-</div>
-
-{/* ACTION */}
-<div className="mt-8 flex justify-end">
-  <button className="bg-indigo-600 hover:bg-indigo-700 transition text-white px-8 py-2 rounded-lg">
-    Save Blog
-  </button>
-</div>
-
-    </div>
     </div>
   );
 }
-

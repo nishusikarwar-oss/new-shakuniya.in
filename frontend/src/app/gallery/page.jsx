@@ -6,6 +6,9 @@ import Footer from "@/components/Footer";
 import event from "@/images/event.png"
 import Navbar from "@/components/Navbar";
 
+
+
+
 const Gallery = () => {
   const [galleryItems, setGalleryItems] = useState([]);
   const [categories, setCategories] = useState(["All"]);
@@ -14,6 +17,7 @@ const Gallery = () => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imagesLoaded, setImagesLoaded] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     const loadGalleryData = async () => {
@@ -181,7 +185,7 @@ const Gallery = () => {
                       </div>
                     )}
                     <img
-                      src={event.src}
+                      src={item.image_url || event.src}
                       alt={item.displayName}
                       className={`w-full h-full object-cover transition-all duration-700 ${
                         hoveredItem === item.id ? "scale-110 blur-sm" : "scale-100"
@@ -189,7 +193,7 @@ const Gallery = () => {
                       onLoad={() => handleImageLoad(item.id)}
                       onError={(e) => {
                         handleImageError(item.id);
-                        e.target.src = "https://via.placeholder.com/400x400?text=Image+Not+Found";
+                        e.target.src = event.src;
                       }}
                     />
                   </div>
@@ -199,7 +203,9 @@ const Gallery = () => {
                     hoveredItem === item.id ? "opacity-100" : "opacity-0"
                   }`}>
                     {/* Icon */}
-                    <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4 border border-white/20 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-4 border border-white/20 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+                    onClick={() => setSelectedImage(item)}
+                    >
                       <Eye className="text-white w-6 h-6" />
                     </div>
 
@@ -233,6 +239,27 @@ const Gallery = () => {
           )}
         </div>
       </section>
+
+      {selectedImage && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    
+    {/* Close Button */}
+    <button
+      onClick={() => setSelectedImage(null)}
+      className="absolute top-6 right-6 text-white text-3xl font-bold hover:text-red-400 transition"
+    >
+      ✕
+    </button>
+
+    {/* Image */}
+    <img
+      src={selectedImage.image_url || event.src}
+      alt={selectedImage.displayName}
+      className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
+    />
+
+  </div>
+)}
 
       <Footer />
     </div>

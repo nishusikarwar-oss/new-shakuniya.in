@@ -66,7 +66,7 @@ class GalleryImageController extends Controller
             $validator = Validator::make($request->all(), [
                 'category_id' => 'required|integer',
                 'image_name' => 'required|string|max:255',
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'image_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
 
             if ($validator->fails()) {
@@ -80,8 +80,8 @@ class GalleryImageController extends Controller
             $data = $request->only(['category_id', 'image_name']);
 
             // Handle image upload
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
+            if ($request->hasFile('image_url')) {
+                $image = $request->file('image_url');
                 $filename = 'gallery_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
                 $path = $image->storeAs('gallery', $filename, 'public');
                 $data['image_url'] = $path;

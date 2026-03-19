@@ -29,10 +29,10 @@ const sidebarLinks = [
     name: "Products",
     href: "/admin/products",
     icon: Package,
-    subLinks: [
-      { name: "Category", href: "/admin/products" },
-      { name: "Product Details", href: "/admin/products/productdetails" },
-    ],
+    // subLinks: [
+    //   // { name: "Category", href: "/admin/products" },
+    //   { name: "Product Details", href: "/admin/products" },
+    // ],
   },
   {
     name: "Services",
@@ -47,6 +47,7 @@ const sidebarLinks = [
   { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },
   { name: "Blogs", href: "/admin/blogs", icon: FileText },
   { name: "Carrer", href: "/admin/carrer", icon: FileText },
+  { name: "Contact Enquiries", href: "/admin/enquiries", icon: Mail },
 ];
 
 const AdminSidebar = ({ collapsed, setCollapsed }) => {

@@ -1,143 +1,114 @@
 "use client";
+// ✅ FIX: Replaced Supabase queries with GET /api/admin/dashboard
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  Users,
-  Mail,
-  TrendingUp,
-  Eye,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
+import { Users, Mail, TrendingUp, Eye, ArrowUpRight, ArrowDownRight, Package, FileText, Image, HelpCircle, Briefcase } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboard } from "@/lib/api";
 
-const Dashboard = () => {
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    // totalEnquiries: 0,
-    // pendingEnquiries: 0,
-    recentActivity: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
+const ICON_MAP = {
+  users: Users, package: Package, "file-text": FileText,
+  image: Image, "help-circle": HelpCircle, briefcase: Briefcase,
+  mail: Mail, activity: TrendingUp, eye: Eye,
+};
+const COLOR_MAP = {
+  primary: "from-blue-500 to-blue-600",   success: "from-green-500 to-green-600",
+  warning: "from-yellow-500 to-yellow-600", info:  "from-cyan-500 to-cyan-600",
+  danger:  "from-red-500 to-red-600",     purple: "from-purple-500 to-purple-600",
+  emerald: "from-emerald-500 to-emerald-600", rose: "from-rose-500 to-rose-600",
+};
+
+export default function Dashboard() {
+  const [statsCards,  setStatsCards]  = useState([]);
+  const [activities,  setActivities]  = useState([]);
+  const [isLoading,   setIsLoading]   = useState(true);
+  const [error,       setError]       = useState(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-
-        const { count: usersCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true });
-
-        const { count: activityCount } = await supabase
-          .from("activity_logs")
-          .select("*", { count: "exact", head: true });
-
-        setStats({
-          totalUsers: usersCount || 0,
-          recentActivity: activityCount || 0,
-        });
-      } catch (error) {
-        console.error("Dashboard stats error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchStats();
+    dashboard.getData()
+      .then((res) => {
+        setStatsCards(res?.data?.stats_cards       || []);
+        setActivities(res?.data?.recent_activities || []);
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setIsLoading(false));
   }, []);
 
-  const statCards = [
-    {
-      title: "Total Users",
-      value: stats.totalUsers,
-      icon: Users,
-      change: "+12%",
-      trend: "up",
-      color: "from-purple-500 to-purple-600",
-    },
-    {
-      title: "E-mail Messages",
-      value: stats.messages,
-      icon: Mail,
-      change: "+8%",
-      trend: "up",
-      color: "from-cyan-500 to-cyan-600",
-    },
-    {
-      title: "Views",
-      value: stats.views,
-      icon: Eye,
-      change: "-3%",
-      trend: "down",
-      color: "from-orange-500 to-orange-600",
-    },
-    {
-      title: "Activity Logs",
-      value: stats.recentActivity,
-      icon: TrendingUp,
-      change: "+15%",
-      trend: "up",
-      color: "from-green-500 to-green-600",
-    },
+  const fallback = [
+    { title: "Total Users",    icon: "users",     color: "primary", value: 0 },
+    { title: "Products",       icon: "package",   color: "success", value: 0 },
+    { title: "Blogs",          icon: "file-text", color: "warning", value: 0 },
+    { title: "Services",       icon: "eye",       color: "info",    value: 0 },
   ];
+
+  const cards = isLoading ? fallback : (statsCards.length ? statsCards : fallback);
 
   return (
     <div className="space-y-6 text-gray-200">
-      {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-        <p className="text-gray-400 mt-1">
-          Welcome back! Here's an overview of your site.
-        </p>
+        <p className="text-gray-400 mt-1">Welcome back! Here's an overview of your site.</p>
       </div>
 
-      {/* Stats */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400 text-sm">
+          ⚠ {error} — make sure the Laravel backend is running at{" "}
+          <code className="bg-red-500/10 px-1 rounded">
+            {process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}
+          </code>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
+        {cards.map((stat, i) => {
+          const Icon  = ICON_MAP[stat.icon]  || TrendingUp;
+          const color = COLOR_MAP[stat.color] || COLOR_MAP.primary;
+          const up    = !stat.growth || stat.growth.startsWith("+");
+
           return (
-            <Card
-              key={index}
-              className="bg-slate-950 border border-white/10 hover:border-blue-500/40 transition"
-            >
+            <Card key={i} className="bg-slate-950 border border-white/10 hover:border-blue-500/40 transition">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm text-gray-400">
-                  {stat.title}
-                </CardTitle>
-                <div
-                  className={`w-10 h-10 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center`}
-                >
+                <CardTitle className="text-sm text-gray-400">{stat.title}</CardTitle>
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
               </CardHeader>
-
               <CardContent>
                 <div className="flex items-end justify-between">
-                  <div className="text-3xl font-bold">
-                    {isLoading ? "—" : stat.value}
-                  </div>
-
-                  <div
-                    className={`flex items-center text-sm ${
-                      stat.trend === "up" ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {stat.trend === "up" ? (
-                      <ArrowUpRight size={16} />
-                    ) : (
-                      <ArrowDownRight size={16} />
-                    )}
-                    {stat.change}
-                  </div>
+                  <div className="text-3xl font-bold">{isLoading ? "—" : (stat.value ?? 0)}</div>
+                  {stat.growth ? (
+                    <div className={`flex items-center text-sm ${up ? "text-green-400" : "text-red-400"}`}>
+                      {up ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                      {stat.growth}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-500">{stat.subtext}</span>
+                  )}
                 </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {!isLoading && activities.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Recent Activity</h2>
+          <div className="bg-slate-900/60 border border-white/10 rounded-xl divide-y divide-white/5">
+            {activities.slice(0, 8).map((a, i) => (
+              <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-white/5">
+                <div className="w-2 h-2 rounded-full bg-purple-400 mt-2 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-200 truncate">
+                    <span className="text-gray-400">{a.action}:</span> {a.details}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-500 shrink-0">{a.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Dashboard;
+}

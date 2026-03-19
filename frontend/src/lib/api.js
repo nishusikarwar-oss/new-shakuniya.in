@@ -1,222 +1,189 @@
- // lib/api.js (या जहाँ आपका apiClient है)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+// lib/api.js
+// ✅ Centralised API client — connects every admin page to Laravel backend
 
-console.log("🔥 API_BASE_URL from env:", API_BASE_URL);
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
-class ApiClient {
-  constructor() {
-    this.baseURL = API_BASE_URL;    
-    console.log("🔥 ApiClient baseURL:", this.baseURL);
-    this.blogsCache = null;
-  }
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    console.log("🔥 Request URL:", url);
-
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-    if (token) {
-      defaultHeaders["Authorization"] = `Bearer ${token}`;
-    }
-
-    const config = {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-      credentials: "include",
-    };
-
-    try {
-      const response = await fetch(url, config);
-
-      // First check if response is ok
-      if (!response.ok) {
-        // Try to get error text
-        const errorText = await response.text();
-        let errorMessage;
-        try {
-          const errorData = errorText ? JSON.parse(errorText) : {};
-          errorMessage = errorData.message || `HTTP error! status: ${response.status}`;
-        } catch {
-          errorMessage = errorText || `HTTP error! status: ${response.status}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      // Check content-type to determine how to handle response
-      const contentType = response.headers.get('content-type');
-      
-      // If response is JSON
-      if (contentType && contentType.includes('application/json')) {
-        const text = await response.text();
-        
-        // If response is empty, return empty object/array based on endpoint
-        if (!text || text.trim() === '') {
-          console.log("⚠️ Empty JSON response from server for:", endpoint);
-          // Return appropriate empty structure based on endpoint
-          if (endpoint.includes('/blogs/') && !endpoint.endsWith('/blogs')) {
-            return null; // Single blog should return null
-          } else if (endpoint.includes('/blogs')) {
-            return []; // Blogs list should return empty array
-          }
-          return {};
-        }
-
-        // Parse JSON
-        try {
-          return JSON.parse(text);
-        } catch (parseError) {
-          console.error("❌ JSON parse error:", parseError, "Response text:", text);
-          throw new Error("Invalid JSON response from server");
-        }
-      } else {
-        // For non-JSON responses, return text
-        const text = await response.text();
-        console.log("📝 Non-JSON response:", text.substring(0, 100) + "...");
-        return text;
-      }
-      
-    } catch (error) {
-      console.error(`Request failed for ${url}:`, error);
-      throw error;
-    }
-  }
-
-  get(endpoint) {
-    return this.request(endpoint, {
-      method: "GET",
-    });
-  }
-
-  post(endpoint, data) {
-    return this.request(endpoint, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  put(endpoint, data) {
-    return this.request(endpoint, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  }
-
-  delete(endpoint) {
-    return this.request(endpoint, {
-      method: "DELETE",
-    });
-  }
-
-  // 📌 Blog specific methods
-  async getBlogs(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    const endpoint = queryString ? `/blogs?${queryString}` : '/blogs';
-    
-    try {
-      const response = await this.get(endpoint);
-      console.log("📚 getBlogs response:", response);
-      
-      // Handle different response structures
-      let blogsData = [];
-      
-      if (response && response.data && Array.isArray(response.data)) {
-        // Laravel API structure: { data: [...] }
-        blogsData = response.data;
-      } else if (Array.isArray(response)) {
-        // Direct array response
-        blogsData = response;
-      } else if (response && typeof response === 'object') {
-        // Try to find array in response
-        const possibleArrays = Object.values(response).find(Array.isArray);
-        if (possibleArrays) {
-          blogsData = possibleArrays;
-        }
-      }
-      
-      // Cache the blogs data
-      if (blogsData.length > 0) {
-        this.blogsCache = blogsData;
-      }
-      
-      // Return in consistent format
-      return { 
-        success: true, 
-        data: blogsData 
-      };
-      
-    } catch (error) {
-      console.error("Error fetching blogs:", error);
-      return { success: false, data: [], error: error.message };
-    }
-  }
-
-  async getBlogBySlug(slug) {
-    console.log("🔍 Fetching blog with slug:", slug);
-    
-    try {
-      // Direct API call to single blog endpoint
-      const response = await this.get(`/blogs/${slug}`);
-      console.log("📡 Blog response:", response);
-      
-      // Check if we got valid data
-      if (response && Object.keys(response).length > 0) {
-        console.log("✅ Blog fetched successfully");
-        
-        // Handle different response structures
-        if (response.data) {
-          return { success: true, data: response.data };
-        } else if (response.id || response.slug) {
-          // Direct blog object
-          return { success: true, data: response };
-        }
-      }
-      
-      // If response is empty or invalid
-      console.log("⚠️ Empty or invalid blog response");
-      return { 
-        success: false, 
-        error: "Blog not found",
-        data: null 
-      };
-      
-    } catch (error) {
-      console.error("❌ Error in getBlogBySlug:", error);
-      
-      // Return a properly formatted error
-      return { 
-        success: false, 
-        error: error.message,
-        data: null 
-      };
-    }
-  }
-
-  async getLatestBlogs(limit = 4) {
-    try {
-      const response = await this.getBlogs({ latest: true, limit });
-      return response;
-    } catch (error) {
-      console.error("Error fetching latest blogs:", error);
-      return { success: false, data: [] };
-    }
-  }
-
-  // Clear cache if needed
-  clearCache() {
-    this.blogsCache = null;
-  }
+function getToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("admin_token") || localStorage.getItem("auth_token");
 }
 
-const apiClient = new ApiClient();
+async function request(endpoint, options = {}) {
+  const url = `${BASE}${endpoint}`;
+  const token = getToken();
+
+  const headers = {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  // Don't set Content-Type for FormData (let browser set it with boundary)
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const res = await fetch(url, { ...options, headers, credentials: 'include' });
+
+  // Try to parse JSON even on error responses
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = { success: false, message: `HTTP ${res.status}` };
+  }
+
+  if (!res.ok) {
+    const msg = data?.message || data?.error || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
+
+const get    = (ep)       => request(ep, { method: "GET" });
+const post   = (ep, body) => request(ep, { method: "POST",   body: body instanceof FormData ? body : JSON.stringify(body) });
+const put    = (ep, body) => request(ep, { method: "PUT",    body: body instanceof FormData ? body : JSON.stringify(body) });
+const patch  = (ep, body) => request(ep, { method: "PATCH",  body: JSON.stringify(body) });
+const del    = (ep)       => request(ep, { method: "DELETE" });
+
+// ── auth ──────────────────────────────────────────────────────────────────────
+export const auth = {
+  login:   (email, password) => post("/login",    { email, password }),
+  logout:  ()                => post("/logout",   {}),
+  getUser: ()                => get("/user"),
+};
+
+// ── dashboard ─────────────────────────────────────────────────────────────────
+export const dashboard = {
+  getData:  () => get("/admin/dashboard"),
+  getStats: () => get("/admin/dashboard/stats"),
+};
+
+// ── blogs ─────────────────────────────────────────────────────────────────────
+export const blogs = {
+  list:   (params = {}) => get(`/blogs?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/blogs/${id}`),
+  create: (data)        => post("/blogs", data),
+
+  // update using POST + _method in FormData
+  update: (id, data) => post(`/blogs/${id}`, data),
+
+  remove: (id)       => del(`/blogs/${id}`),
+};
+
+// ── faqs ──────────────────────────────────────────────────────────────────────
+export const faqs = {
+  list:         (params = {}) => get(`/faqs?${new URLSearchParams(params)}`),
+  listAll:      ()            => get("/faqs?active=false&per_page=100"),
+  create:       (data)        => post("/faqs", data),
+  update:       (id, data)    => put(`/faqs/${id}`, data),
+  remove:       (id)          => del(`/faqs/${id}`),
+  toggleStatus: (id)          => patch(`/faqs/${id}/toggle-status`),
+};
+
+// ── gallery ───────────────────────────────────────────────────────────────────
+export const gallery = {
+  list:   (params = {}) => get(`/gallery-images?${new URLSearchParams(params)}`),
+  create: (formData)    => post("/gallery-images", formData),
+  update: (id, data)    => post(`/gallery-images/${id}?_method=PUT`, data),
+  remove: (id)          => del(`/gallery-images/${id}`),
+};
+
+// ── products ──────────────────────────────────────────────────────────────────
+export const products = {
+  list:   (params = {}) => get(`/products?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/products/${id}`),
+  create: (data)        => post("/products", data),
+  update: (id, data)    => post(`/products/${id}?_method=PUT`, data), // FormData workaround
+  remove: (id)          => del(`/products/${id}`),
+  toggleActive: (id)    => patch(`/products/${id}/toggle-active`),
+  reorder: (orders)     => post("/products/reorder", { orders }),
+  bulkDelete: (ids)     => post("/products/bulk-delete", { ids }),
+};
+
+// ── users ─────────────────────────────────────────────────────────────────────
+export const users = {
+  list:   (params = {}) => get(`/users?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/users/${id}`),
+  create: (data)        => post("/users", data),
+  update: (id, data)    => put(`/users/${id}`, data),
+  remove: (id)          => del(`/users/${id}`),
+  toggleStatus: (id)    => patch(`/users/${id}/toggle-status`),
+};
+
+// ── services ──────────────────────────────────────────────────────────────────
+export const services = {
+  list:   (params = {}) => get(`/services?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/services/${id}`),
+  create: (data)        => post("/services", data),
+  update: (id, data)    => put(`/services/${id}`, data),
+  remove: (id)          => del(`/services/${id}`),
+  toggleActive: (id)    => patch(`/services/${id}/toggle-active`),
+  toggleFeatured: (id)  => patch(`/services/${id}/toggle-featured`),
+};
+
+// ── categories ────────────────────────────────────────────────────────────────
+export const categories = {
+  list:   (params = {}) => get(`/categories?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/categories/${id}`),
+  create: (data)        => post("/categories", data),
+  update: (id, data)    => put(`/categories/${id}`, data),
+  remove: (id)          => del(`/categories/${id}`),
+  toggleStatus: (id)    => patch(`/categories/${id}/toggle-status`),
+};
+
+// ── career / jobs ─────────────────────────────────────────────────────────────
+export const perks = {
+  list:   ()            => get("/perks"),
+  get:    (id)          => get(`/perks/${id}`),
+  create: (data)        => post("/perks", data),
+  update: (id, data)    => put(`/perks/${id}`, data),
+  remove: (id)          => del(`/perks/${id}`),
+};
+
+export const jobs = {
+  list:   (params = {}) => get(`/jobs?${new URLSearchParams(params)}`),
+  get:    (id)          => get(`/jobs/${id}`),
+  create: (data)        => post("/jobs", data),
+  update: (id, data)    => put(`/jobs/${id}`, data),
+  remove: (id)          => del(`/jobs/${id}`),
+  stats:  ()            => get("/jobs/stats"),
+};
+
+// ── enquiries / contact messages ──────────────────────────────────────────────
+export const contactMessages = {
+  list:         (params = {}) => get(`/contact-messages?${new URLSearchParams(params)}`),
+  get:          (id)          => get(`/contact-messages/${id}`),
+  create:       (data)        => post("/contact-messages", data),
+  updateStatus: (id, status)  => patch(`/contact-messages/${id}/status`, { status }),
+  remove:       (id)          => del(`/contact-messages/${id}`),
+  stats:        ()            => get("/contact-messages/stats"),
+};
+
+// ── default export ────────────────────────────────────────────────────────────
+const apiClient = {
+  auth,
+  dashboard,
+  blogs,
+  faqs,
+  gallery,
+  products,
+  users,
+  services,
+  categories,
+  perks,
+  jobs,
+  contactMessages,
+  // Backward compatibility with frontend components
+  getBlogs: (params) => blogs.list(params),
+  getBlogBySlug: (slug) => blogs.get(slug),
+  getProducts: (params) => products.list(params),
+  getProductBySlug: (slug) => get(`/products/slug/${slug}`),
+  getCategories: () => get("/categories"),
+  getServices: () => get("/services"),
+};
+
 export default apiClient;

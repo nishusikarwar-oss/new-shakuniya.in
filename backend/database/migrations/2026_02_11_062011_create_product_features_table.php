@@ -11,8 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('product_features');
+
         Schema::create('product_features', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->uuid('product_id');
+            $table->string('icon_name')->default('Zap');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('display_order')->default(0);
+            $table->boolean('is_active')->default(true);
+            
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
             $table->timestamps();
         });
     }

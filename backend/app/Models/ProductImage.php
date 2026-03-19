@@ -51,11 +51,18 @@ class ProductImage extends Model
      */
     public function getImageUrlAttribute($value): string
     {
+        if (!$value) return asset('images/default-product.png');
         if (str_starts_with($value, 'http')) {
             return $value;
         }
         
-        return asset('storage/' . $value);
+        // Remove 'storage/' prefix if it exists in DB to avoid double prefixing
+        $path = ltrim($value, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8);
+        }
+        
+        return asset('storage/' . $path);
     }
 
     /**

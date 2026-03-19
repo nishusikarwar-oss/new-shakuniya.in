@@ -79,33 +79,10 @@ export default function Products() {
               }
             }
             
-            // Take first 3 features
-            const features = featuresData.slice(0, 3);
-            
-            // Fetch product images
-            const imagesResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/product-images?product_id=${product.id}`
-            );
-            
-            let imagesData = [];
-            if (imagesResponse.ok) {
-              const imagesJson = await imagesResponse.json();
-              
-              if (imagesJson.success === true && imagesJson.data) {
-                if (Array.isArray(imagesJson.data)) {
-                  imagesData = imagesJson.data;
-                } else if (imagesJson.data.data && Array.isArray(imagesJson.data.data)) {
-                  imagesData = imagesJson.data.data;
-                }
-              } else if (Array.isArray(imagesJson)) {
-                imagesData = imagesJson;
-              }
-            }
-            
-            const image = imagesData.length > 0 
-              ? (imagesData[0].image_url || imagesData[0].url) 
-              : (product.image_url || null);
-            
+            // Base URL for images
+            const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+            const imageUrl = product.image ? (product.image.startsWith('http') ? product.image : `${mediaBaseUrl}/${product.image}`) : null;
+
             return {
               id: product.id,
               slug: product.slug || '',
@@ -115,7 +92,7 @@ export default function Products() {
               short_description: product.short_description || 
                 (product.description ? product.description.substring(0, 100) + '...' : 'No description available'),
               features: features,
-              image: image,
+              image: imageUrl,
               icon: IconMap[product.icon_name] || Icons.HelpCircle
             };
           } catch (err) {
@@ -222,45 +199,55 @@ export default function Products() {
                     href={`/products/${product.slug}`}
                     className="group block h-full"
                   >
-                    <div className="glass-card p-8 rounded-[2rem] hover:bg-[#1a1a2e]/80 transition-all duration-500 hover:border-[#00d9ff]/50 hover:shadow-[0_0_40px_rgba(0,217,255,0.15)] hover:-translate-y-2 h-full flex flex-col">
-                      {/* Icon */}
-                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-white/10 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-cyan-500 transition-all duration-500 shadow-lg">
-                        <IconComponent
-                          size={28}
-                          className="text-primary group-hover:text-white transition-colors"
-                        />
+                    <div className="glass-card p-0 rounded-[2rem] hover:bg-[#1a1a2e]/80 transition-all duration-500 hover:border-[#00d9ff]/50 hover:shadow-[0_0_40px_rgba(0,217,255,0.15)] hover:-translate-y-2 h-full flex flex-col overflow-hidden">
+                      {/* Product Image */}
+                      <div className="relative w-full h-52 overflow-hidden">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center">
+                            <IconComponent size={40} className="text-primary/50" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] to-transparent opacity-60" />
                       </div>
 
                       {/* Content */}
-                      <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-[#00d9ff] transition-colors duration-300">
-                        {product.name}
-                      </h3>
-                      <p className="text-gray-400 text-base mb-6 line-clamp-3 leading-relaxed group-hover:text-gray-300 transition-colors">
-                        {product.short_description}
-                      </p>
+                      <div className="p-8 pt-4 flex flex-col flex-grow">
+                        <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-[#00d9ff] transition-colors duration-300">
+                          {product.name}
+                        </h3>
+                        <p className="text-gray-400 text-base mb-6 line-clamp-2 leading-relaxed group-hover:text-gray-300 transition-colors">
+                          {product.short_description}
+                        </p>
 
-                      {/* Features Preview */}
-                      {product.features && Array.isArray(product.features) && product.features.length > 0 && (
-                        <ul className="space-y-3 mb-8 flex-grow">
-                          {product.features.map((feature, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center text-gray-500 text-sm group-hover:text-gray-400 transition-colors"
-                            >
-                              <span className="w-1.5 h-1.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full mr-3 shadow-[0_0_5px_rgba(147,51,234,0.5)]" />
-                              {feature.name || feature.title || feature.feature_description || 'Feature'}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                        {/* Features Preview */}
+                        {product.features && Array.isArray(product.features) && product.features.length > 0 && (
+                          <ul className="space-y-3 mb-8 flex-grow">
+                            {product.features.map((feature, index) => (
+                              <li
+                                key={index}
+                                className="flex items-center text-gray-500 text-sm group-hover:text-gray-400 transition-colors"
+                              >
+                                <span className="w-1.5 h-1.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full mr-3 shadow-[0_0_5px_rgba(147,51,234,0.5)]" />
+                                {feature.name || feature.title || feature.feature_description || 'Feature'}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
 
-                      {/* CTA */}
-                      <div className="inline-flex items-center text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 group-hover:from-white group-hover:to-white transition-all duration-300 mt-auto pt-4 border-t border-white/5 uppercase tracking-widest">
-                        View Product
-                        <ArrowRight
-                          size={14}
-                          className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform"
-                        />
+                        {/* CTA */}
+                        <div className="inline-flex items-center text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 group-hover:from-white group-hover:to-white transition-all duration-300 mt-auto pt-4 border-t border-white/5 uppercase tracking-widest">
+                          View Product
+                          <ArrowRight
+                            size={14}
+                            className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform"
+                          />
+                        </div>
                       </div>
                     </div>
                   </Link>

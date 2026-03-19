@@ -9,18 +9,18 @@ import BlogCard from "./BlogCard";
 import apiClient from "@/lib/api"; // ✅ अपने apiClient को import करें
 
 const BlogSection = () => {
-  const [blogs, setBlogs] = useState([]);
+  const [blogs, setBlogs] = useState({ data: [] });
   const [loading, setLoading] = useState(true);
 console.log(blogs)
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
         // ✅ API से 4 latest blogs लाएँ
-        const data = await apiClient.getLatestBlogs(4);
+        const data = await apiClient.getBlogs({ per_page: 4 });
         setBlogs(data);
       } catch (error) {
         console.error("Error fetching blogs:", error);
-        setBlogs([]);
+        setBlogs({ data: [] });
       } finally {
         setLoading(false);
       }
