@@ -32,7 +32,7 @@ const ContactSection = () => {
         phone: formData.mobile,          // mobile → phone
         service_interest: formData.service, // service → service_interest
         message: formData.message,
-        company: formData.company
+        company_name: formData.company
       }),
     });
 
@@ -122,7 +122,7 @@ const ContactSection = () => {
                 <input
                   name="company"
                   placeholder="Company *"
-                  value={formData.company}
+                  value={formData.company_name}
                   onChange={handleChange}
                   className="w-full bg-[#1c1c36]/50 border border-white/5 focus:border-[#b366ff] h-14 rounded-2xl px-6 text-white outline-none transition-all"
                   required

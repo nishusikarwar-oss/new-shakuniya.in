@@ -1,241 +1,6 @@
-// "use client";
-// // ✅ FIX: Replaced Supabase queries with real API calls to /api/products
-// // Previously this page used supabase.from("product_categories") which doesn't exist in this project.
+"use client";
 
-// import { useState, useEffect, useRef } from "react";
-// import { Loader2, Pencil, Trash2, Eye, Upload, X } from "lucide-react";
-// import { products as productApi } from "@/lib/api";
-
-// const API_STORAGE = (process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://127.0.0.1:8000") + "/storage/";
-
-// export default function ProductsPage() {
-//   const [list,      setList]      = useState([]);
-//   const [loading,   setLoading]   = useState(true);
-//   const [saving,    setSaving]    = useState(false);
-//   const [search,    setSearch]    = useState("");
-//   const [editId,    setEditId]    = useState(null);
-//   const [msg,       setMsg]       = useState(null);
-
-//   // form fields
-//   const [title,     setTitle]     = useState("");
-//   const [slug,      setSlug]      = useState("");
-//   const [shortDesc, setShortDesc] = useState("");
-//   const [priceUsd,  setPriceUsd]  = useState("");
-//   const [priceInr,  setPriceInr]  = useState("");
-//   const [isActive,  setIsActive]  = useState(true);
-//   const [preview,   setPreview]   = useState(null);
-
-//   const flash = (type, text) => { setMsg({ type, text }); setTimeout(() => setMsg(null), 4000); };
-
-//   // ── fetch ──────────────────────────────────────────────────────────────────
-//   const fetchProducts = async () => {
-//     setLoading(true);
-//     try {
-//       const res  = await productApi.list({ per_page: 50 });
-//       // Laravel paginates: res.data.data or res.data
-//       const raw  = res?.data;
-//       const data = raw?.data ?? (Array.isArray(raw) ? raw : []);
-//       setList(data);
-//     } catch (e) {
-//       flash("error", e.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => { fetchProducts(); }, []);
-
-//   // ── auto slug ──────────────────────────────────────────────────────────────
-//   const handleTitleChange = (v) => {
-//     setTitle(v);
-//     if (!editId) setSlug(v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
-//   };
-
-//   // ── save ───────────────────────────────────────────────────────────────────
-//   const handleSave = async (e) => {
-//     e.preventDefault();
-//     if (!title.trim()) { flash("error", "Product title is required."); return; }
-//     setSaving(true);
-//     try {
-//       const payload = {
-//         title, slug: slug || undefined,
-//         short_description: shortDesc,
-//         price_usd: priceUsd || null,
-//         price_inr: priceInr || null,
-//         is_active: isActive,
-//       };
-//       if (editId) {
-//         await productApi.update(editId, payload);
-//         flash("success", "Product updated.");
-//       } else {
-//         await productApi.create(payload);
-//         flash("success", "Product created.");
-//       }
-//       resetForm();
-//       fetchProducts();
-//     } catch (e) {
-//       flash("error", e.message);
-//     } finally {
-//       setSaving(false);
-//     }
-//   };
-
-//   // ── delete ─────────────────────────────────────────────────────────────────
-//   const handleDelete = async (id) => {
-//     if (!confirm("Delete this product?")) return;
-//     try {
-//       await productApi.remove(id);
-//       flash("success", "Product deleted.");
-//       fetchProducts();
-//     } catch (e) { flash("error", e.message); }
-//   };
-
-//   // ── edit ───────────────────────────────────────────────────────────────────
-//   const startEdit = (p) => {
-//     setEditId(p.id); setTitle(p.title || ""); setSlug(p.slug || "");
-//     setShortDesc(p.short_description || ""); setPriceUsd(p.price_usd || "");
-//     setPriceInr(p.price_inr || ""); setIsActive(p.is_active ?? true);
-//     window.scrollTo({ top: 0, behavior: "smooth" });
-//   };
-
-//   const resetForm = () => {
-//     setEditId(null); setTitle(""); setSlug(""); setShortDesc(""); setPriceUsd(""); setPriceInr(""); setIsActive(true); setPreview(null);
-//   };
-
-//   const filtered = list.filter((p) =>
-//     p.title?.toLowerCase().includes(search.toLowerCase()) ||
-//     p.slug?.toLowerCase().includes(search.toLowerCase())
-//   );
-
-//   return (
-//     <div className="min-h-screen bg-slate-950 text-gray-200 p-6 space-y-6">
-//       <div className="flex items-center justify-between">
-//         <div>
-//           <h1 className="text-2xl font-bold text-white">{editId ? "Edit Product" : "Add Product"}</h1>
-//           <p className="text-sm text-slate-400 mt-1">Admin / Product Management</p>
-//         </div>
-//       </div>
-
-//       {msg && (
-//         <div className={`p-3 rounded-lg text-sm ${
-//           msg.type === "success" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"
-//         }`}>{msg.text}</div>
-//       )}
-
-//       {/* ── FORM ──────────────────────────────────────────────────────── */}
-//       <form onSubmit={handleSave} className="bg-slate-900 rounded-xl border border-slate-800 p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-//         <div className="space-y-4">
-//           <div>
-//             <label className="block text-sm font-medium mb-1 text-slate-300">Product Title *</label>
-//             <input value={title} onChange={(e) => handleTitleChange(e.target.value)} required
-//               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium mb-1 text-slate-300">URL Slug</label>
-//             <input value={slug} onChange={(e) => setSlug(e.target.value)}
-//               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium mb-1 text-slate-300">Short Description</label>
-//             <textarea rows={3} value={shortDesc} onChange={(e) => setShortDesc(e.target.value)}
-//               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//           </div>
-//         </div>
-
-//         <div className="space-y-4">
-//           <div>
-//             <label className="block text-sm font-medium mb-1 text-slate-300">Price (USD)</label>
-//             <input type="number" step="0.01" value={priceUsd} onChange={(e) => setPriceUsd(e.target.value)}
-//               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium mb-1 text-slate-300">Price (INR)</label>
-//             <input type="number" step="0.01" value={priceInr} onChange={(e) => setPriceInr(e.target.value)}
-//               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//           </div>
-//           <div className="flex items-center gap-3">
-//             <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)}
-//               className="accent-indigo-500 w-4 h-4" />
-//             <label htmlFor="isActive" className="text-sm text-slate-300">Active</label>
-//           </div>
-//         </div>
-
-//         <div className="md:col-span-2 flex justify-end gap-3">
-//           {editId && (
-//             <button type="button" onClick={resetForm}
-//               className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg">
-//               Cancel
-//             </button>
-//           )}
-//           <button type="submit" disabled={saving}
-//             className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-8 py-2 rounded-lg flex items-center gap-2">
-//             {saving && <Loader2 size={16} className="animate-spin" />}
-//             {editId ? "Update Product" : "Save Product"}
-//           </button>
-//         </div>
-//       </form>
-
-//       {/* ── LIST TABLE ────────────────────────────────────────────────── */}
-//       <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-//         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-//           <h2 className="text-lg font-semibold text-white flex-1">Products ({filtered.length})</h2>
-//           <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)}
-//             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-//         </div>
-
-//         {loading ? (
-//           <div className="text-center py-8 flex items-center justify-center gap-2 text-slate-400">
-//             <Loader2 size={18} className="animate-spin" /> Loading…
-//           </div>
-//         ) : filtered.length === 0 ? (
-//           <p className="text-center text-slate-400 py-8">No products found.</p>
-//         ) : (
-//           <div className="overflow-x-auto">
-//             <table className="w-full text-sm">
-//               <thead className="bg-slate-800 text-slate-300">
-//                 <tr>
-//                   <th className="px-4 py-3 text-left">#</th>
-//                   <th className="px-4 py-3 text-left">Title</th>
-//                   <th className="px-4 py-3 text-left">Slug</th>
-//                   <th className="px-4 py-3 text-right">Price (USD)</th>
-//                   <th className="px-4 py-3 text-center">Active</th>
-//                   <th className="px-4 py-3 text-center">Actions</th>
-//                 </tr>
-//               </thead>
-//               <tbody className="divide-y divide-slate-800">
-//                 {filtered.map((p, i) => (
-//                   <tr key={p.id} className="hover:bg-slate-800/50">
-//                     <td className="px-4 py-3">{i + 1}</td>
-//                     <td className="px-4 py-3 font-medium">{p.title}</td>
-//                     <td className="px-4 py-3 text-slate-400 text-xs">{p.slug}</td>
-//                     <td className="px-4 py-3 text-right">{p.price_usd ? `$${p.price_usd}` : "—"}</td>
-//                     <td className="px-4 py-3 text-center">
-//                       <span className={`px-2 py-0.5 rounded text-xs ${p.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-//                         {p.is_active ? "Active" : "Inactive"}
-//                       </span>
-//                     </td>
-//                     <td className="px-4 py-3">
-//                       <div className="flex justify-center gap-2">
-//                         <button onClick={() => startEdit(p)} className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"><Pencil size={13} /></button>
-//                         <button onClick={() => handleDelete(p.id)} className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"><Trash2 size={13} /></button>
-//                       </div>
-//                     </td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
- "use client";
-
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import {
   Eye,
@@ -246,14 +11,9 @@ import {
   X,
   Save,
   Image as ImageIcon,
-  Globe,
-  Twitter,
-  Code,
   DollarSign,
-  Tag,
   FileText,
   Link,
-  EyeOff,
   ChevronDown,
   ChevronUp,
   Star,
@@ -261,76 +21,112 @@ import {
   Zap,
   MessageSquare,
   Infinity,
-  Award
+  Award,
+  Loader2,
+  AlertCircle,
+  FolderPlus,
+  Tag
 } from "lucide-react";
 
 const CustomEditor = dynamic(() => import("@/components/CustomEditor"), {
   ssr: false,
-  loading: () => <div className="h-96 bg-slate-950 border border-white/10 rounded-lg flex items-center justify-center">Loading editor...</div>
+  loading: () => (
+    <div className="h-96 bg-slate-950 border border-white/10 rounded-lg flex items-center justify-center text-gray-400">
+      Loading editor...
+    </div>
+  )
 });
 
-export default function ProductListPage() {
+// ─── Helper: resolve any image_url value to a full src string ───────────────
+const resolveImageUrl = (image_url, storageBase) => {
+  if (!image_url) return null;
+  if (image_url.startsWith("http://") || image_url.startsWith("https://")) {
+    return image_url;
+  }
+  return `${storageBase}/${image_url}`;
+};
+
+export default function ProductDashboard() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showFeatures, setShowFeatures] = useState(false);
-  const [productFeatures, setProductFeatures] = useState([]);
   const [expandedProduct, setExpandedProduct] = useState(null);
-  
+  const [message, setMessage] = useState(null);
+
+  // Features state
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [features, setFeatures] = useState([]);
+  const [savingFeature, setSavingFeature] = useState(false);
+  const [featureFormData, setFeatureFormData] = useState({
+    title: "",
+    description: "",
+    icon_name: "Star"
+  });
+
   // Form state
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
     short_description: "",
     full_description: "",
-    tags: "",
     price_usd: "",
     price_inr: "",
     image: null,
     video_url: "",
-    logo_preview: null,
-    featured_preview: null,
     meta_title: "",
     meta_description: "",
     meta_keywords: "",
-    canonical_url: "",
-    og_title: "",
-    og_description: "",
-    og_image: null,
-    og_preview: null,
-    twitter_title: "",
-    twitter_description: "",
-    twitter_image: null,
-    twitter_preview: null,
-    schema_markup: "",
     is_active: true
   });
 
+  const [imagePreview, setImagePreview] = useState(null);
   const [status, setStatus] = useState("active");
-  const [ogImage, setOgImage] = useState(null);
-  const [twitterImage, setTwitterImage] = useState(null);
-  const [tab, setTab] = useState("openGraph");
-  const [logo, setLogo] = useState(null);
-  const [featured, setFeatured] = useState(null);
 
-  // Fetch products
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const API_URL = "http://127.0.0.1:8000/api";
+  const STORAGE_URL = "http://127.0.0.1:8000/storage";
 
+  const iconOptions = [
+    { name: "Star", icon: <Star size={20} /> },
+    { name: "Zap", icon: <Zap size={20} /> },
+    { name: "MessageSquare", icon: <MessageSquare size={20} /> },
+    { name: "Clock", icon: <Clock size={20} /> },
+    { name: "Infinity", icon: <Infinity size={20} /> },
+    { name: "Award", icon: <Award size={20} /> }
+  ];
+
+  // Show flash message
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 4000);
+  };
+
+  // Fetch all products
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://127.0.0.1:8000/api/products');
-      const data = await response.json();
-      
-      if (data.success) {
-        setProducts(data.data.data);
+      const response = await fetch(`${API_URL}/products`);
+      const result = await response.json();
+
+      console.log("API Response:", result);
+
+      let productsData = [];
+      if (result?.data?.data) {
+        productsData = result.data.data;
+      } else if (result?.data) {
+        productsData = result.data;
+      } else if (Array.isArray(result)) {
+        productsData = result;
+      } else if (result?.products) {
+        productsData = result.products;
       }
+
+      setProducts(productsData);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error("Error fetching products:", error);
+      showMessage("error", "Failed to fetch products: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -338,86 +134,80 @@ export default function ProductListPage() {
 
   const fetchProductFeatures = async (productId) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/products/${productId}/features`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setProductFeatures(data.data);
-        setExpandedProduct(productId);
+      const response = await fetch(`${API_URL}/products/${productId}/features`);
+      const result = await response.json();
+
+      if (response.ok) {
+        const featuresData = result.data || result;
+        setFeatures(Array.isArray(featuresData) ? featuresData : []);
       }
     } catch (error) {
-      console.error('Error fetching features:', error);
+      console.error("Error fetching features:", error);
     }
   };
 
+  // Fetch single product details
   const fetchProductDetails = async (id) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/products/${id}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        const product = data.data;
+      const response = await fetch(`${API_URL}/products/${id}`);
+      await fetchProductFeatures(id);
+      const result = await response.json();
+
+      if (response.ok) {
+        const product = result.data || result;
         setSelectedProduct(product);
         setFormData({
           title: product.title || "",
           slug: product.slug || "",
           short_description: product.short_description || "",
           full_description: product.full_description || "",
-          tags: "",
           price_usd: product.price_usd || "",
-          price_inr: product.prices?.inr?.raw || "",
-          image: null,
+          price_inr: product.price_inr || "",
+          image: product.image_url || "",          // file input always starts empty
           video_url: product.video_url || "",
-          logo_preview: null,
-          featured_preview: product.primary_image_url || null,
           meta_title: product.meta_title || "",
           meta_description: product.meta_description || "",
           meta_keywords: product.meta_keywords || "",
-          canonical_url: "",
-          og_title: "",
-          og_description: "",
-          og_image: null,
-          og_preview: null,
-          twitter_title: "",
-          twitter_description: "",
-          twitter_image: null,
-          twitter_preview: null,
-          schema_markup: "",
-          is_active: product.is_active
+          is_active: product.is_active === 1 || product.is_active === true
         });
         setStatus(product.is_active ? "active" : "inactive");
+
+        // FIX: use helper so absolute URLs and relative paths both work
+        // setImagePreview(resolveImageUrl(product.image_url, STORAGE_URL));
+
         setShowAddForm(true);
-        fetchProductFeatures(id);
+      } else {
+        showMessage("error", "Failed to fetch product details");
       }
     } catch (error) {
-      console.error('Error fetching product details:', error);
+      console.error("Error fetching product details:", error);
+      showMessage("error", "Error fetching product details");
     }
   };
 
-  const handleView = (product) => {
-    fetchProductDetails(product.id);
-  };
+  const handleEdit = (product) => fetchProductDetails(product.id);
+  const handleView = (product) => fetchProductDetails(product.id);
 
-  const handleEdit = (product) => {
-    fetchProductDetails(product.id);
-  };
-
+  // Handle delete product
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-    
+
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/products/${id}`, {
-        method: 'DELETE',
-      });
-      
+      const response = await fetch(`${API_URL}/products/${id}`, { method: "DELETE" });
+
       if (response.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== id));
+        showMessage("success", "Product deleted successfully");
+        fetchProducts();
+      } else {
+        showMessage("error", "Failed to delete product");
       }
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error("Error deleting product:", error);
+      showMessage("error", "Error deleting product");
     }
   };
 
+  // Handle add new product
   const handleAddNew = () => {
     setSelectedProduct(null);
     setFormData({
@@ -425,118 +215,242 @@ export default function ProductListPage() {
       slug: "",
       short_description: "",
       full_description: "",
-      tags: "",
       price_usd: "",
       price_inr: "",
-      image: null,
+      image_url: "",
       video_url: "",
-      logo_preview: null,
-      featured_preview: null,
       meta_title: "",
       meta_description: "",
       meta_keywords: "",
-      canonical_url: "",
-      og_title: "",
-      og_description: "",
-      og_image: null,
-      og_preview: null,
-      twitter_title: "",
-      twitter_description: "",
-      twitter_image: null,
-      twitter_preview: null,
-      schema_markup: "",
       is_active: true
     });
-    setLogo(null);
-    setFeatured(null);
-    setOgImage(null);
-    setTwitterImage(null);
+    setFeatures([]);
+    setImagePreview(null);
     setStatus("active");
     setShowAddForm(true);
   };
 
+  // Handle form input changes
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "title" && !selectedProduct) {
+      const slug = value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      setFormData((prev) => ({ ...prev, slug }));
+    }
+  };
+
+  // Handle image upload
+ const handleImageUpload = (e) => {
+  const file = e.target.files[0];
+
+  if (file) {
+    setFormData((prev) => ({
+      ...prev,
+      image: file
+    }));
+
+    const preview = URL.createObjectURL(file);
+    setImagePreview(preview);
+  }
+};
+
+  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    if (!formData.title.trim()) {
+      showMessage("error", "Product title is required");
+      return;
+    }
+
+    setSaving(true);
+
     try {
       const url = selectedProduct
-        ? `http://127.0.0.1:8000/api/products/${selectedProduct.id}`
-        : 'http://127.0.0.1:8000/api/products';
-      
-      // Use POST for both but add _method=PUT for updates (Laravel requirement for FormData)
-      const method = 'POST';
-      
+        ? `${API_URL}/products/${selectedProduct.id}`
+        : `${API_URL}/products`;
+
       const submitData = new FormData();
+
       if (selectedProduct) {
-        submitData.append('_method', 'PUT');
+        submitData.append("_method", "PUT");
       }
-      
-      submitData.append('title', formData.title);
-      submitData.append('slug', formData.slug || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-      submitData.append('short_description', formData.short_description || "");
-      submitData.append('full_description', formData.full_description || "");
-      submitData.append('price_usd', formData.price_usd || '0');
-      submitData.append('price_inr', formData.price_inr || '0');
-      submitData.append('video_url', formData.video_url || "");
-      submitData.append('meta_title', formData.meta_title || "");
-      submitData.append('meta_description', formData.meta_description || "");
-      submitData.append('meta_keywords', formData.meta_keywords || "");
-      submitData.append('is_active', status === "active" ? '1' : '0');
-      
-      // Add missing fields
-      submitData.append('tags', formData.tags || "");
-      submitData.append('canonical_url', formData.canonical_url || "");
-      submitData.append('og_title', formData.og_title || "");
-      submitData.append('og_description', formData.og_description || "");
-      submitData.append('twitter_title', formData.twitter_title || "");
-      submitData.append('twitter_description', formData.twitter_description || "");
-      submitData.append('schema_markup', formData.schema_markup || "");
-      
-      if (featured) submitData.append('featured_image', featured);
-      if (ogImage) submitData.append('og_image', ogImage);
-      if (twitterImage) submitData.append('twitter_image', twitterImage);
-      
-      const response = await fetch(url, {
-        method: method,
-        body: submitData
-      });
-      
+
+      submitData.append("title", formData.title);
+      submitData.append(
+        "slug",
+        formData.slug ||
+          formData.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "")
+      );
+      submitData.append("short_description", formData.short_description || "");
+      submitData.append("full_description", formData.full_description || "");
+      submitData.append("price_usd", formData.price_usd || "0");
+      submitData.append("price_inr", formData.price_inr || "0");
+      submitData.append("video_url", formData.video_url || "");
+      submitData.append("meta_title", formData.meta_title || "");
+      submitData.append("meta_description", formData.meta_description || "");
+      submitData.append("meta_keywords", formData.meta_keywords || "");
+      submitData.append("is_active", status === "active" ? "1" : "0");
+
+      // Only append image when the user actually picked a new file
+      if (formData.image) {
+        submitData.append("image", formData.image);
+      }
+
+      const response = await fetch(url, { method: "POST", body: submitData });
+      const result = await response.json();
+
       if (response.ok) {
+        showMessage(
+          "success",
+          selectedProduct ? "Product updated successfully" : "Product created successfully"
+        );
         fetchProducts();
+
+        if (!selectedProduct && result.data?.id) {
+          await fetchProductFeatures(result.data.id);
+          setSelectedProduct(result.data);
+        }
+
         setShowAddForm(false);
         setSelectedProduct(null);
+        setImagePreview(null);
+        setFeatures([]);
+      } else {
+        showMessage("error", result.message || result.error || "Failed to save product");
       }
     } catch (error) {
-      console.error('Error saving product:', error);
+      console.error("Error saving product:", error);
+      showMessage("error", "Error saving product: " + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const previewImage = (file) => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
+  const handleCancel = () => {
+    setShowAddForm(false);
+    setSelectedProduct(null);
+    setImagePreview(null);
+    setFeatures([]);
   };
 
-  // Icon mapping for features
   const getIcon = (iconName) => {
-    switch(iconName) {
-      case 'MessageSquare': return <MessageSquare size={16} className="text-blue-400" />;
-      case 'Zap': return <Zap size={16} className="text-yellow-400" />;
-      case 'Clock': return <Clock size={16} className="text-green-400" />;
-      case 'Infinity': return <Infinity size={16} className="text-purple-400" />;
-      case 'Award': return <Award size={16} className="text-orange-400" />;
-      case 'Star': return <Star size={16} className="text-yellow-400" />;
-      default: return <Tag size={16} className="text-gray-400" />;
+    const icons = {
+      MessageSquare: <MessageSquare size={16} className="text-blue-400" />,
+      Zap: <Zap size={16} className="text-yellow-400" />,
+      Clock: <Clock size={16} className="text-green-400" />,
+      Infinity: <Infinity size={16} className="text-purple-400" />,
+      Award: <Award size={16} className="text-orange-400" />,
+      Star: <Star size={16} className="text-yellow-400" />
+    };
+    return icons[iconName] || <Tag size={16} className="text-gray-400" />;
+  };
+
+  const openFeatureModal = () => {
+    setFeatureFormData({ title: "", description: "", icon_name: "Star" });
+    setShowFeatureModal(true);
+  };
+
+  const closeFeatureModal = () => {
+    setShowFeatureModal(false);
+    setFeatureFormData({ title: "", description: "", icon_name: "Star" });
+  };
+
+  const handleFeatureChange = (field, value) => {
+    setFeatureFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddFeature = async (e) => {
+    e.preventDefault();
+
+    if (!featureFormData.title.trim()) {
+      showMessage("error", "Feature title is required");
+      return;
+    }
+    if (!featureFormData.description.trim()) {
+      showMessage("error", "Feature description is required");
+      return;
+    }
+    if (!selectedProduct) {
+      showMessage("error", "Please save the product first before adding features");
+      return;
+    }
+
+    setSavingFeature(true);
+
+    try {
+      const response = await fetch(`${API_URL}/products/${selectedProduct.id}/features`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: featureFormData.title,
+          description: featureFormData.description,
+          icon_name: featureFormData.icon_name
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showMessage("success", "Feature added successfully");
+        await fetchProductFeatures(selectedProduct.id);
+        closeFeatureModal();
+      } else {
+        showMessage("error", result.message || "Failed to add feature");
+      }
+    } catch (error) {
+      console.error("Error adding feature:", error);
+      showMessage("error", "Error adding feature: " + error.message);
+    } finally {
+      setSavingFeature(false);
     }
   };
 
-  const filteredProducts = products.filter(product => 
-    product.title?.toLowerCase().includes(search.toLowerCase())
+  const handleDeleteFeature = async (featureId) => {
+    if (!confirm("Are you sure you want to delete this feature?")) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/products/${selectedProduct.id}/features/${featureId}`,
+        { method: "DELETE" }
+      );
+
+      if (response.ok) {
+        showMessage("success", "Feature deleted successfully");
+        await fetchProductFeatures(selectedProduct.id);
+      } else {
+        showMessage("error", "Failed to delete feature");
+      }
+    } catch (error) {
+      console.error("Error deleting feature:", error);
+      showMessage("error", "Error deleting feature");
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter(
+    (product) =>
+      product.title?.toLowerCase().includes(search.toLowerCase()) ||
+      product.slug?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading && !showAddForm) {
     return (
       <div className="min-h-screen bg-[#0b1220] text-gray-200 p-4 md:p-6 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="flex items-center gap-2">
+          <Loader2 size={24} className="animate-spin text-indigo-500" />
+          <span>Loading products...</span>
+        </div>
       </div>
     );
   }
@@ -545,46 +459,46 @@ export default function ProductListPage() {
     <div className="min-h-screen bg-[#0b1220] text-gray-200 p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">Products Details</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Product Dashboard</h1>
+          <p className="text-sm text-gray-400 mt-1">Manage your products</p>
+        </div>
         <button
           onClick={handleAddNew}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition"
         >
           <Plus size={16} />
           Add New Product
         </button>
       </div>
 
+      {/* Flash Message */}
+      {message && (
+        <div
+          className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+            message.type === "success"
+              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+              : "bg-red-500/20 text-red-400 border border-red-500/30"
+          }`}
+        >
+          <AlertCircle size={16} />
+          {message.text}
+        </div>
+      )}
+
       {!showAddForm ? (
         <>
-          {/* Filter Section */}
-          <div className="bg-[#111827] rounded-lg p-4 space-y-4 border border-gray-800">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select className="bg-[#0b1220] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300">
-                <option>-- Select Products --</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-
-              <select className="bg-[#0b1220] border border-gray-700 rounded px-3 py-2 text-sm text-gray-300">
-                <option>-- Select Product Type --</option>
-                <option>Normal</option>
-                <option>Featured</option>
-              </select>
-
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-2 text-sm">
-                Filter
-              </button>
-
-              <div className="relative">
+          {/* Search */}
+          <div className="bg-[#111827] rounded-lg p-4 border border-gray-800">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-1 relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search products by title or slug..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-[#0b1220] border border-gray-700 rounded pl-9 pr-3 py-2 w-full text-sm text-gray-300"
+                  className="w-full bg-[#0b1220] border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -593,610 +507,505 @@ export default function ProductListPage() {
           {/* Products Table */}
           <div className="bg-[#111827] rounded-lg border border-gray-800 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-[#0b1220] text-gray-300">
+              <thead className="bg-[#0b1220] text-gray-300 border-b border-gray-800">
                 <tr>
-                  <th className="p-3 border border-gray-800 text-left">Id</th>
-                  <th className="p-3 border border-gray-800 text-left">Offer Type</th>
-                  <th className="p-3 border border-gray-800 text-left">Date</th>
-                  <th className="p-3 border border-gray-800 text-left">Name</th>
-                  <th className="p-3 border border-gray-800 text-left">Category</th>
-                  <th className="p-3 border border-gray-800 text-left">Lead Rate</th>
-                  <th className="p-3 border border-gray-800 text-left">Vendor Name</th>
-                  <th className="p-3 border border-gray-800 text-left">Thumbnail</th>
-                  <th className="p-3 border border-gray-800 text-left">Action</th>
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">Image</th>
+                  <th className="p-3 text-left">Title</th>
+                  <th className="p-3 text-left">Slug</th>
+                  <th className="p-3 text-right">Price (USD)</th>
+                  <th className="p-3 text-right">Price (INR)</th>
+                  <th className="p-3 text-center">Status</th>
+                  <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
-
-              <tbody>
-                {filteredProducts.map((item) => (
-                  <Fragment key={item.id}>
-                    <tr className="hover:bg-[#0b1220] transition">
-                      <td className="p-3 border border-gray-800 font-mono text-xs">
-                        {item.id.toString().substring(0, 8)}...
+              <tbody className="divide-y divide-gray-800">
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="p-8 text-center text-gray-400">
+                      No products found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-[#0b1220] transition">
+                      <td className="p-3 font-mono text-xs text-gray-400">
+                        {product.id?.toString().substring(0, 8)}...
                       </td>
-                      <td className="p-3 border border-gray-800">Normal</td>
-                      <td className="p-3 border border-gray-800">
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="p-3 border border-gray-800 font-medium">{item.title}</td>
-                      <td className="p-3 border border-gray-800">Default</td>
-                      <td className="p-3 border border-gray-800 text-green-400">
-                        ${parseFloat(item.price_usd || 0).toLocaleString()}
-                      </td>
-                      <td className="p-3 border border-gray-800">Admin</td>
-                      <td className="p-3 border border-gray-800">
-                        <div className="w-10 h-10 bg-gray-800 rounded overflow-hidden">
-                          {item.primary_image_url ? (
-                            <img 
-                              src={item.primary_image_url} 
-                              alt={item.title}
+                      <td className="p-3">
+                        <div className="w-10 h-10 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
+                          {/* FIX: use resolveImageUrl so both absolute and relative paths work */}
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.title}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon size={16} className="text-gray-600" />
-                            </div>
+                            <ImageIcon size={16} className="text-gray-600" />
                           )}
                         </div>
                       </td>
-                      <td className="p-3 border border-gray-800">
-                        <div className="flex gap-1">
+                      <td className="p-3 font-medium text-white">
+                        {product.title || "Untitled"}
+                      </td>
+                      <td className="p-3 text-xs text-gray-400 font-mono">
+                        {product.slug || "—"}
+                      </td>
+                      <td className="p-3 text-right text-green-400">
+                        {product.price_usd
+                          ? `$${parseFloat(product.price_usd).toLocaleString()}`
+                          : "—"}
+                      </td>
+                      <td className="p-3 text-right text-orange-400">
+                        {product.price_inr
+                          ? `₹${parseFloat(product.price_inr).toLocaleString()}`
+                          : "—"}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            product.is_active
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {product.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-center gap-2">
                           <button
-                            onClick={() => handleView(item)}
-                            className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded"
+                            onClick={() => handleView(product)}
+                            className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded transition"
                             title="View"
                           >
                             <Eye size={14} />
                           </button>
                           <button
-                            onClick={() => handleEdit(item)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded"
+                            onClick={() => handleEdit(product)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded transition"
                             title="Edit"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => handleDelete(item.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded"
+                            onClick={() => handleDelete(product.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded transition"
                             title="Delete"
                           >
                             <Trash2 size={14} />
                           </button>
+                          <button
+                            onClick={() => {
+                              fetchProductDetails(product.id);
+                              openFeatureModal();
+                              setImagePreview(product.image_url);
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white p-1.5 rounded transition"
+                            title="Add Features"
+                          >
+                            <FolderPlus size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
-                    
-                    {/* Features Row (shown when product is selected) */}
-                    {expandedProduct === item.id && productFeatures.length > 0 && (
-                      <tr className="bg-[#0b1220]">
-                        <td colSpan="9" className="p-3 border border-gray-800">
-                          <div className="space-y-2">
-                            <h3 className="text-sm font-semibold text-indigo-400 mb-2">Product Features</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {productFeatures.map((feature) => (
-                                <div key={feature.id} className="bg-[#111827] p-3 rounded border border-gray-700">
-                                  <div className="flex items-start gap-2">
-                                    <div className="mt-1">
-                                      {getIcon(feature.icon_name)}
-                                    </div>
-                                    <div>
-                                      <h4 className="text-sm font-medium text-white">{feature.title}</h4>
-                                      <p className="text-xs text-gray-400 mt-1">{feature.description}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </>
       ) : (
         /* Add/Edit Product Form */
-        <div className="bg-slate-950 text-gray-200 p-6">
-          <h1 className="text-xl font-semibold mb-6 text-white">
-            {selectedProduct ? 'Edit Product' : 'Add Product'}
-          </h1>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-white">
+              {selectedProduct ? "Edit Product" : "Add New Product"}
+            </h1>
+            <button onClick={handleCancel} className="text-gray-400 hover:text-white transition">
+              <X size={24} />
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* LEFT: Product Details */}
-              <div className="lg:col-span-2 bg-slate-900 rounded-lg border border-white/10 p-5">
-                <h2 className="font-medium mb-4 text-white">Products Details</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <div className="bg-[#111827] rounded-lg border border-gray-800 p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Basic Information</h2>
 
-                {/* Product Title */}
-                <div className="mb-4">
-                  <label className="text-sm font-medium">
-                    Product Title<span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Product Title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                {/* URL Slug */}
-                <div className="mb-4">
-                  <label className="text-sm font-medium">URL Slug</label>
-                  <input
-                    type="text"
-                    placeholder="Enter URL Slug (e.g., my-product-post)"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    SEO-friendly URL. If left empty, will be generated from title.
-                  </p>
-                </div>
-
-                {/* Short Description */}
-                <div className="mb-4">
-                  <label className="text-sm font-medium">Short Description</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Enter short description"
-                    value={formData.short_description}
-                    onChange={(e) => setFormData({...formData, short_description: e.target.value})}
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Product Description */}
-                <div className="mb-4">
-                  <h1 className="text-xl font-bold mb-2 mt-6 bg-linear-to-r from-purple-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                    Product Description
-                  </h1>
-                  <div className="w-full max-w-5xl bg-[#111118] border border-white/10 rounded-2xl shadow-2xl">
-                    <CustomEditor 
-                      value={formData.full_description}
-                      onChange={(content) => setFormData({...formData, full_description: content})}
-                    />
-                  </div>
-                </div>
-
-                {/* Product Video URL */}
-                <div className="mb-4">
-                  <label className="text-sm font-medium">Product Video URL</label>
-                  <input
-                    type="text"
-                    placeholder="https://youtube.com/watch?v=xxxxx"
-                    value={formData.video_url}
-                    onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Accepts YouTube, Vimeo, or direct MP4 links.
-                  </p>
-                </div>
-
-                {/* Pricing */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Price (USD)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={formData.price_usd}
-                      onChange={(e) => setFormData({...formData, price_usd: e.target.value})}
-                      className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Price (INR)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={formData.price_inr}
-                      onChange={(e) => setFormData({...formData, price_inr: e.target.value})}
-                      className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div>
-                  <label className="text-sm font-medium">
-                    Tags<span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter comma separated tags"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Maximum of 15 keywords. Use lowercase.
-                  </p>
-                </div>
-              </div>
-
-              {/* RIGHT: Product Image */}
-              <div className="bg-slate-900 rounded-lg border border-white/10 p-5">
-                <h2 className="font-medium mb-4 text-white">Product Image</h2>
-
-                {/* Product Image */}
-                <div className="mb-6">
-                  <label className="text-sm font-medium">
-                    Product Image{" "}
-                    <span className="text-red-400">(925 × 661px)*</span>
-                  </label>
-
-                  <input
-                    type="file"
-                    className="block mt-2 text-sm text-gray-400"
-                    onChange={(e) => setFeatured(e.target.files[0])}
-                  />
-
-                  <p className="text-xs text-gray-400 mt-1">
-                    Appears in product listings and details
-                  </p>
-
-                  <div className="mt-3 w-full h-48 border border-white/10 flex items-center justify-center text-xs text-gray-500 bg-slate-950 rounded">
-                    {featured ? (
-                      <img
-                        src={previewImage(featured)}
-                        className="object-cover w-full h-full rounded"
-                        alt="Preview"
-                      />
-                    ) : formData.featured_preview ? (
-                      <img
-                        src={formData.featured_preview}
-                        className="object-cover w-full h-full rounded"
-                        alt="Product"
-                      />
-                    ) : (
-                      "IMAGE PREVIEW"
-                    )}
-                  </div>
-                </div>
-
-                {/* Alt Text */}
-                <div className="mb-6">
-                  <label className="text-sm font-medium">Image Alt Text</label>
-                  <input
-                    type="text"
-                    placeholder="Describe the image for accessibility"
-                    className="w-full mt-1 bg-slate-950 border border-white/10 rounded px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Open Graph Image */}
-                {/* <div>
-                  <label className="text-sm font-medium">
-                    Open Graph Image{" "}
-                    <span className="text-red-400">(1200 × 630px)</span>
-                  </label>
-                  <input 
-                    type="file" 
-                    className="block mt-2 text-sm text-gray-400"
-                    onChange={(e) => setOgImage(e.target.files[0])}
-                  />
-                </div> */}
-              </div>
-            </div>
-
-            {/* SEO Metadata Section */}
-            <div className="mt-8 bg-slate-900 rounded-xl shadow-xl p-6 border border-slate-800">
-              <h1 className="text-2xl font-semibold mb-6 text-white">
-                SEO Metadata
-              </h1>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* LEFT SIDE */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-300">
-                      Meta Title
+                    <label className="block text-sm font-medium mb-1 text-gray-300">
+                      Product Title <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="Meta Title (50-60 characters)"
-                      value={formData.meta_title}
-                      onChange={(e) => setFormData({...formData, meta_title: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Enter product title"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange("title", e.target.value)}
+                      className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Recommended: 50–60 characters
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">
+                      URL Slug
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="auto-generated from title"
+                      value={formData.slug}
+                      onChange={(e) => handleInputChange("slug", e.target.value)}
+                      className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      SEO-friendly URL. Leave empty to auto-generate.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-300">
-                      Meta Description
+                    <label className="block text-sm font-medium mb-1 text-gray-300">
+                      Short Description
                     </label>
                     <textarea
-                      rows={4}
-                      placeholder="Meta Description (150-160 characters)"
-                      value={formData.meta_description}
-                      onChange={(e) => setFormData({...formData, meta_description: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows={3}
+                      placeholder="Brief description of the product"
+                      value={formData.short_description}
+                      onChange={(e) => handleInputChange("short_description", e.target.value)}
+                      className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Recommended: 150–160 characters
-                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">
+                        Price (USD)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.price_usd}
+                        onChange={(e) => handleInputChange("price_usd", e.target.value)}
+                        className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">
+                        Price (INR)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.price_inr}
+                        onChange={(e) => handleInputChange("price_inr", e.target.value)}
+                        className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">
+                      Product Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
+                    />
+                    {/* FIX: imagePreview is already a full resolved URL — works for existing
+                        DB images (set via resolveImageUrl in fetchProductDetails) and new
+                        local file picks (set via URL.createObjectURL in handleImageUpload) */}
+                   <div className="mt-3 w-full h-40 bg-[#0b1220] border border-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
+  {imagePreview || formData.image ? (
+    <img
+      src={imagePreview || formData.image}
+      alt="Preview"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div className="text-center text-gray-500">
+      <ImageIcon size={32} className="mx-auto mb-2 opacity-50" />
+      <p className="text-xs">Image preview</p>
+    </div>
+  )}
+</div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-300">
-                      Meta Keywords
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="Comma separated keywords"
-                      value={formData.meta_keywords}
-                      onChange={(e) => setFormData({...formData, meta_keywords: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  {/* <div>
-                    <label className="block text-sm font-medium mb-1 text-slate-300">
-                      Canonical URL
+                    <label className="block text-sm font-medium mb-1 text-gray-300">
+                      Video URL
                     </label>
                     <input
                       type="url"
-                      placeholder="https://example.com/blog-post"
-                      value={formData.canonical_url}
-                      onChange={(e) => setFormData({...formData, canonical_url: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="https://youtube.com/watch?v=..."
+                      value={formData.video_url}
+                      onChange={(e) => handleInputChange("video_url", e.target.value)}
+                      className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Use if this content appears on multiple URLs
+                    <p className="text-xs text-gray-500 mt-1">
+                      YouTube, Vimeo, or direct video URL
                     </p>
-                  </div> */}
-                </div>
-
-                {/* RIGHT SIDE */}
-                <div className="space-y-6">
-                  <div>
-                    <label className="text-sm font-medium text-slate-300">
-                      Open Graph Image
-                      <span className="text-red-400"> (1200 × 630px)</span>
-                    </label>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setOgImage(e.target.files[0])}
-                      className="mt-2 text-sm text-slate-400"
-                    />
-
-                    <div className="mt-3 border border-slate-700 rounded-lg h-40 flex items-center justify-center bg-slate-800">
-                      {ogImage ? (
-                        <img
-                          src={previewImage(ogImage)}
-                          alt="OG Preview"
-                          className="h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-slate-500">IMAGE PREVIEW</span>
-                      )}
-                    </div>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-slate-300">
-                      Twitter Card Image
-                      <span className="text-red-400"> (1200 × 675px)</span>
-                    </label>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setTwitterImage(e.target.files[0])}
-                      className="mt-2 text-sm text-slate-400"
-                    />
-
-                    <div className="mt-3 border border-slate-700 rounded-lg h-40 flex items-center justify-center bg-slate-800">
-                      {twitterImage ? (
-                        <img
-                          src={previewImage(twitterImage)}
-                          alt="Twitter Preview"
-                          className="h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-slate-500">IMAGE PREVIEW</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-slate-300">
-                      Status
-                    </label>
-                    <div className="flex gap-6 text-slate-300">
-                      <label className="flex items-center gap-2">
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Status</label>
+                    <div className="flex gap-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
                           checked={status === "active"}
                           onChange={() => setStatus("active")}
                           className="accent-indigo-500"
                         />
-                        Active
+                        <span className="text-gray-300">Active</span>
                       </label>
-
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
                           checked={status === "inactive"}
                           onChange={() => setStatus("inactive")}
                           className="accent-indigo-500"
                         />
-                        Inactive
+                        <span className="text-gray-300">Inactive</span>
                       </label>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* SOCIAL MEDIA & SCHEMA */}
-              <div className="mt-12">
-                <h2 className="text-lg font-semibold text-white mb-4">
-                  Social Media & Schema
-                </h2>
+            {/* Full Description */}
+            <div className="bg-[#111827] rounded-lg border border-gray-800 p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Full Description</h2>
+              <div className="min-h-[400px]">
+                <CustomEditor
+                  value={formData.full_description}
+                  onChange={(content) => handleInputChange("full_description", content)}
+                />
+              </div>
+            </div>
 
-                {/* Tabs */}
-                <div className="flex flex-wrap gap-2 border-b border-slate-700 mb-6">
-                  {[
-                    { key: "openGraph", label: "Open Graph" },
-                    { key: "twitter", label: "Twitter" },
-                    { key: "schema", label: "Schema Markup" },
-                  ].map((item) => (
+            {/* Product Features Section */}
+            {selectedProduct && (
+              <div className="bg-[#111827] rounded-lg border border-gray-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white">Product Features</h2>
+                  <button
+                    type="button"
+                    onClick={openFeatureModal}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition"
+                  >
+                    <Plus size={14} />
+                    Add Feature
+                  </button>
+                </div>
+
+                {features.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <p className="text-sm">
+                      No features added yet. Click the "Add Feature" button to add features.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {features.map((feature) => (
+                      <div
+                        key={feature.id}
+                        className="bg-[#0b1220] p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="p-2 bg-[#1f2937] rounded-lg">
+                              {getIcon(feature.icon_name || "Star")}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium text-white">{feature.title}</h3>
+                              <p className="text-xs text-gray-400 mt-1">{feature.description}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFeature(feature.id)}
+                            className="text-red-400 hover:text-red-300 transition ml-2"
+                            title="Delete feature"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SEO Metadata */}
+            <div className="bg-[#111827] rounded-lg border border-gray-800 p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">SEO Metadata</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">
+                    Meta Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Meta title (50-60 characters)"
+                    value={formData.meta_title}
+                    onChange={(e) => handleInputChange("meta_title", e.target.value)}
+                    className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Recommended: 50-60 characters</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">
+                    Meta Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Meta description (150-160 characters)"
+                    value={formData.meta_description}
+                    onChange={(e) => handleInputChange("meta_description", e.target.value)}
+                    className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Recommended: 150-160 characters</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">
+                    Meta Keywords
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Comma separated keywords"
+                    value={formData.meta_keywords}
+                    onChange={(e) => handleInputChange("meta_keywords", e.target.value)}
+                    className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition flex items-center gap-2 disabled:opacity-50"
+              >
+                {saving && <Loader2 size={16} className="animate-spin" />}
+                {saving ? "Saving..." : selectedProduct ? "Update Product" : "Create Product"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Feature Modal */}
+      {showFeatureModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#111827] rounded-xl border border-gray-700 w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-gray-700">
+              <h2 className="text-lg font-semibold text-white">Add Product Feature</h2>
+              <button
+                onClick={closeFeatureModal}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddFeature} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">
+                  Feature Title <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Cross Platform"
+                  value={featureFormData.title}
+                  onChange={(e) => handleFeatureChange("title", e.target.value)}
+                  className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">
+                  Feature Description <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the feature..."
+                  value={featureFormData.description}
+                  onChange={(e) => handleFeatureChange("description", e.target.value)}
+                  className="w-full bg-[#0b1220] border border-gray-700 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-300">
+                  Select Icon
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {iconOptions.map((iconOption) => (
                     <button
-                      key={item.key}
+                      key={iconOption.name}
                       type="button"
-                      onClick={() => setTab(item.key)}
-                      className={`px-4 py-2 rounded-t-lg text-sm font-medium transition
-                        ${
-                          tab === item.key
-                            ? "bg-slate-800 text-white border border-b-0 border-slate-700"
-                            : "text-slate-400 hover:text-white"
-                        }`}
+                      onClick={() => handleFeatureChange("icon_name", iconOption.name)}
+                      className={`p-3 rounded-lg border transition flex items-center justify-center gap-2 ${
+                        featureFormData.icon_name === iconOption.name
+                          ? "bg-indigo-600 border-indigo-500 text-white"
+                          : "bg-[#0b1220] border-gray-700 text-gray-400 hover:border-gray-500"
+                      }`}
                     >
-                      {item.label}
+                      {iconOption.icon}
+                      <span className="text-xs">{iconOption.name}</span>
                     </button>
                   ))}
                 </div>
-
-                {/* Content Box */}
-                <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 space-y-6">
-                  {tab === "openGraph" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          OG Title
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Open Graph Title"
-                          value={formData.og_title}
-                          onChange={(e) => setFormData({...formData, og_title: e.target.value})}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          OG Description
-                        </label>
-                        <textarea
-                          rows={4}
-                          placeholder="Open Graph Description"
-                          value={formData.og_description}
-                          onChange={(e) => setFormData({...formData, og_description: e.target.value})}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {tab === "twitter" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Twitter Title
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Twitter Card Title"
-                          value={formData.twitter_title}
-                          onChange={(e) => setFormData({...formData, twitter_title: e.target.value})}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Twitter Description
-                        </label>
-                        <textarea
-                          rows={4}
-                          placeholder="Twitter Card Description"
-                          value={formData.twitter_description}
-                          onChange={(e) => setFormData({...formData, twitter_description: e.target.value})}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {tab === "schema" && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        Schema Markup (JSON-LD)
-                      </label>
-                      <textarea
-                        rows={6}
-                        placeholder='{
-  "@context": "https://schema.org",
-  "@type": "Product"
-}'
-                        value={formData.schema_markup}
-                        onChange={(e) => setFormData({...formData, schema_markup: e.target.value})}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 font-mono text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  )}
-                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-8 flex justify-end gap-4">
+              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setSelectedProduct(null);
-                  }}
-                  className="bg-gray-600 hover:bg-gray-700 transition text-white px-8 py-2 rounded-lg"
+                  onClick={closeFeatureModal}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 transition text-white px-8 py-2 rounded-lg"
+                  disabled={savingFeature}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Save Product
+                  {savingFeature && <Loader2 size={16} className="animate-spin" />}
+                  {savingFeature ? "Adding..." : "Add Feature"}
                 </button>
               </div>
-            </div>
-          </form>
-
-          {/* Product Features Section (shown when editing) */}
-          {selectedProduct && productFeatures.length > 0 && (
-            <div className="mt-8 bg-slate-900 rounded-xl shadow-xl p-6 border border-slate-800">
-              <h2 className="text-lg font-semibold text-white mb-4">Product Features</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productFeatures.map((feature) => (
-                  <div key={feature.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-slate-700 rounded-lg">
-                        {getIcon(feature.icon_name)}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-white">{feature.title}</h3>
-                        <p className="text-xs text-gray-400 mt-1">{feature.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            </form>
+          </div>
         </div>
       )}
     </div>

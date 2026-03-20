@@ -34,15 +34,8 @@ class Product extends Model
         'meta_title',
         'meta_description',
         'meta_keywords',
-        'tags',
-        'canonical_url',
-        'og_title',
-        'og_description',
-        'og_image',
-        'twitter_title',
-        'twitter_description',
-        'twitter_image',
-        'schema_markup',
+        // 'tags',
+        
         'created_by',
         'updated_by'
     ];
@@ -65,8 +58,6 @@ class Product extends Model
 
     protected $appends = [
         'primary_image_url',
-        'og_image_url',
-        'twitter_image_url'
     ];
 
     // ============ RELATIONSHIPS ============
@@ -108,19 +99,19 @@ class Product extends Model
         return asset('storage/' . $this->image);
     }
 
-    public function getOgImageUrlAttribute(): ?string
-    {
-        if (!$this->og_image) return null;
-        if (str_starts_with($this->og_image, 'http')) return $this->og_image;
-        return asset('storage/' . $this->og_image);
-    }
+    // public function getOgImageUrlAttribute(): ?string
+    // {
+    //     if (!$this->og_image) return null;
+    //     if (str_starts_with($this->og_image, 'http')) return $this->og_image;
+    //     return asset('storage/' . $this->og_image);
+    // }
 
-    public function getTwitterImageUrlAttribute(): ?string
-    {
-        if (!$this->twitter_image) return null;
-        if (str_starts_with($this->twitter_image, 'http')) return $this->twitter_image;
-        return asset('storage/' . $this->twitter_image);
-    }
+    // public function getTwitterImageUrlAttribute(): ?string
+    // {
+    //     if (!$this->twitter_image) return null;
+    //     if (str_starts_with($this->twitter_image, 'http')) return $this->twitter_image;
+    //     return asset('storage/' . $this->twitter_image);
+    // }
 
     // ============ SCOPES ============
 
@@ -138,8 +129,8 @@ class Product extends Model
     {
         return $query->where(function($q) use ($term) {
             $q->where('title', 'like', "%{$term}%")
-              ->orWhere('short_description', 'like', "%{$term}%")
-              ->orWhere('tags', 'like', "%{$term}%");
+              ->orWhere('short_description', 'like', "%{$term}%");
+            //   ->orWhere('tags', 'like', "%{$term}%");
         });
     }
 }

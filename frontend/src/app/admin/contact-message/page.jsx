@@ -15,7 +15,7 @@ const STATUS_COLOR = {
   replied: "bg-green-500/20  text-green-400  border-green-500/30",
 };
 
-export default function EnquiriesPage() {
+export default function ContactMessagesPage() {
   const [msgs,        setMsgs]        = useState([]);
   const [isLoading,   setIsLoading]   = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,7 +70,7 @@ export default function EnquiriesPage() {
     <div className="space-y-6 text-gray-200">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Enquiries</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Contact</h1>
           <p className="text-gray-400 mt-1">Contact form messages</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchMessages}

@@ -64,14 +64,14 @@ async function getProductData(slug) {
 
     // Fetch product features
     const featuresResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/product-features?product_id=${product.id}`,
-      { next: { revalidate: 3600 } }
-    );
+  `${process.env.NEXT_PUBLIC_API_URL}/products/${product.id}/features`,
+  { next: { revalidate: 3600 } }
+);
     
     let featuresData = [];
     if (featuresResponse.ok) {
       const featuresJson = await featuresResponse.json();
-      
+      console.log('Features API Response: ==>', featuresJson);
       // Handle different feature response formats
       if (featuresJson.success === true && featuresJson.data) {
         if (Array.isArray(featuresJson.data)) {
@@ -195,7 +195,7 @@ async function getProductData(slug) {
       description: product.full_description || product.description || product.short_description || '',
       video_url: product.video_url,
       video_text: product.video_text,
-      image: product.image,
+      image: product.image_url || product.image || '',
       meta_title: product.meta_title,
       meta_description: product.meta_description,
       meta_keywords: product.meta_keywords,
@@ -226,7 +226,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: product.og_title || product.meta_title || product.title,
       description: product.og_description || product.meta_description || product.short_description,
-      images: imageUrl ? [{ url: imageUrl }] : [],
+      image: imageUrl ? [{ url: imageUrl }] : [],
     },
     twitter: {
       card: 'summary_large_image',
@@ -333,12 +333,14 @@ export default async function ProductPage({ params }) {
     const src = path.startsWith('http') ? path : `${mediaBaseUrl}/${path}`;
     return (
       <img
-        src={src}
+        src={product.image || src}
         alt={alt}
         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
       />
     );
   };
+
+  // src="http://127.0.0.1:8000/storage/products/l8sh26i7IA59eJxpAPNTEhONPpj92WAK3oabPXcv.png"
 
   return (
     <>

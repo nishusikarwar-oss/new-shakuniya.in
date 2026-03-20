@@ -308,6 +308,7 @@ Route::delete('portfolio/{id}',      [PortfolioProjectController::class, 'destro
 // CONTACT INQUIRIES
 // ============================================================
 Route::get('contact-inquiries',                  [ContactInquiryController::class, 'index']);
+Route::post('contact-inquiries', [ContactInquiryController::class, 'store']);
 Route::get('contact-inquiries/stats',            [ContactInquiryController::class, 'stats']);
 Route::get('contact-inquiries/{id}',             [ContactInquiryController::class, 'show']);
 Route::put('contact-inquiries/{id}',             [ContactInquiryController::class, 'update']);
@@ -416,9 +417,16 @@ Route::prefix('products')->group(function () {
 Route::get('/product-features',                    [ProductFeatureController::class, 'index']);
 Route::get('/products/{productId}/features',       [ProductFeatureController::class, 'forProduct']);
 Route::get('/product-features/{id}',               [ProductFeatureController::class, 'show']);
-Route::post('/product-features',                   [ProductFeatureController::class, 'store']);
-Route::put('/product-features/{id}',               [ProductFeatureController::class, 'update']);
-Route::delete('/product-features/{id}',            [ProductFeatureController::class, 'destroy']);
+Route::post('/products/{productId}/features', [ProductFeatureController::class, 'store']);
+Route::put('/products/{productId}/features/{id}',  [ProductFeatureController::class, 'update']);
+Route::delete('/products/{productId}/features/{id}',            [ProductFeatureController::class, 'destroy']);
+
+ // Add these feature routes
+    Route::prefix('{productId}/features')->group(function () {
+        Route::get('/', [ProductFeatureController::class, 'index']);
+        Route::post('/', [ProductFeatureController::class, 'store']);
+        Route::delete('/{featureId}', [ProductFeatureController::class, 'destroy']);
+    });
 
 Route::get('/product-images',                      [ProductImageController::class, 'index']);
 Route::get('/products/{productId}/images',         [ProductImageController::class, 'forProduct']);

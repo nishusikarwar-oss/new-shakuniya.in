@@ -75,104 +75,81 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:200',
-            'slug' => 'nullable|string|max:100|unique:products',
-            'short_description' => 'nullable|string',
-            'full_description' => 'nullable|string',
-            'price_usd' => 'nullable|numeric|min:0',
-            'price_inr' => 'nullable|numeric|min:0',
-            'image_url' => 'nullable|string',
-            'video_url' => 'nullable|string',
-            'video_text' => 'nullable|string',
-            'is_active' => 'nullable',
-            'meta_title' => 'nullable|string|max:200',
-            'meta_description' => 'nullable|string',
-            'meta_keywords' => 'nullable|string',
-            'tags' => 'nullable|string',
-            'canonical_url' => 'nullable|string',
-            'og_title' => 'nullable|string',
-            'og_description' => 'nullable|string',
-            'twitter_title' => 'nullable|string',
-            'twitter_description' => 'nullable|string',
-            'schema_markup' => 'nullable|string',
-            'featured_image' => 'nullable|image|max:5120',
-            'og_image' => 'nullable|image|max:5120',
-            'twitter_image' => 'nullable|image|max:5120',
-            'features' => 'nullable|array',
-            'features.*.icon_name' => 'required_with:features|string',
-            'features.*.title' => 'required_with:features|string',
-            'features.*.description' => 'nullable|string',
+  public function store(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'title' => 'required|string|max:200',
+        'slug' => 'nullable|string|max:100|unique:products,slug',
+        'short_description' => 'nullable|string',
+        'full_description' => 'nullable|string',
+        'price_usd' => 'nullable|numeric|min:0',
+        'price_inr' => 'nullable|numeric|min:0',
+        'image_url' => 'nullable|string',
+        'video_url' => 'nullable|string',
+        'meta_title' => 'nullable|string|max:200',
+        'meta_description' => 'nullable|string',
+        'meta_keywords' => 'nullable|string',
+        // 'tags' => 'nullable|string',
+        'is_active' => 'nullable|boolean',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation errors',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+
+        $data = $request->only([
+            'title',
+            'slug',
+            'short_description',
+            'full_description',
+            'price_usd',
+            'price_inr',
+            'image_url',
+            'video_url',
+            'meta_title',
+            'meta_description',
+            'meta_keywords',
+            // 'tags',
+            'is_active'
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
+        // Auto generate slug if empty
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($request->title);
         }
 
-        DB::beginTransaction();
-        try {
-            $data = $request->except(['featured_image', 'og_image', 'twitter_image', 'features', 'image_url']);
-            
-            if ($request->filled('image_url')) {
-                $data['image'] = $request->image_url;
-            }
-
-            if (empty($data['slug'])) {
-                $data['slug'] = Str::slug($request->title);
-            }
-
-            // Fix boolean for is_active from FormData
-            $data['is_active'] = $request->input('is_active') === '1' || $request->input('is_active') === 'true' || $request->input('is_active') === true;
-
-            $product = Product::create($data);
-
-            // File Uploads
-            if ($request->hasFile('featured_image')) {
-                $product->image = $request->file('featured_image')->store('products', 'public');
-            }
-            if ($request->hasFile('og_image')) {
-                $product->og_image = $request->file('og_image')->store('seo', 'public');
-            }
-            if ($request->hasFile('twitter_image')) {
-                $product->twitter_image = $request->file('twitter_image')->store('seo', 'public');
-            }
-            $product->save();
-
-            // Features
-            if ($request->has('features') && is_array($request->features)) {
-                foreach ($request->features as $index => $featureData) {
-                    $product->features()->create([
-                        'icon_name' => $featureData['icon_name'] ?? 'Zap',
-                        'title' => $featureData['title'],
-                        'description' => $featureData['description'] ?? null,
-                        'display_order' => $index,
-                        'is_active' => true
-                    ]);
+        // Convert is_active to boolean
+        $data['is_active'] = $request->input('is_active') ? 1 : 0;
+        // File Uploads
+            if ($request->hasFile('image')) {
+                if ($product->image_url && !str_starts_with($product->image_url, 'http')) {
+                    Storage::disk('public')->delete($product->image_url);
                 }
+               $data['image_url'] = $request->file('image')->store('products', 'public');
             }
+        $product = Product::create($data);
 
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Product created successfully',
-                'data' => $product->load('features')
-            ], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Product created successfully',
+            'data' => $product
+        ], 201);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create product',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to create product',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function update(Request $request, $id)
     {
@@ -186,23 +163,20 @@ class ProductController extends Controller
                 'full_description' => 'nullable|string',
                 'price_usd' => 'nullable|numeric|min:0',
                 'price_inr' => 'nullable|numeric|min:0',
-                'image_url' => 'nullable|string',
+                // 'image_url' => 'nullable|string',
                 'video_url' => 'nullable|string',
                 'video_text' => 'nullable|string',
                 'is_active' => 'nullable',
                 'meta_title' => 'nullable|string|max:200',
                 'meta_description' => 'nullable|string',
                 'meta_keywords' => 'nullable|string',
-                'tags' => 'nullable|string',
+                // 'tags' => 'nullable|string',
                 'canonical_url' => 'nullable|string',
                 'og_title' => 'nullable|string',
                 'og_description' => 'nullable|string',
                 'twitter_title' => 'nullable|string',
                 'twitter_description' => 'nullable|string',
-                'schema_markup' => 'nullable|string',
-                'featured_image' => 'nullable|image|max:5120',
-                'og_image' => 'nullable|image|max:5120',
-                'twitter_image' => 'nullable|image|max:5120',
+               
                 'features' => 'nullable|array',
             ]);
 
@@ -218,35 +192,24 @@ class ProductController extends Controller
             
             $data = $request->except(['_method', 'featured_image', 'og_image', 'twitter_image', 'features', 'image_url']);
 
-            if ($request->filled('image_url')) {
-                $data['image'] = $request->image_url;
-            }
+            // if ($request->filled('image')) {
+            //     $data['image'] = $request->image;
+            // }
 
             if (isset($data['is_active'])) {
                 $data['is_active'] = $data['is_active'] === '1' || $data['is_active'] === 'true' || $data['is_active'] === true;
             }
-
+           unset($data['image']);
             $product->update($data);
 
             // File Uploads
-            if ($request->hasFile('featured_image')) {
-                if ($product->image && !str_starts_with($product->image, 'http')) {
-                    Storage::disk('public')->delete($product->image);
+            if ($request->hasFile('image')) {
+                if ($product->image_url && !str_starts_with($product->image_url, 'http')) {
+                    Storage::disk('public')->delete($product->image_url);
                 }
-                $product->image = $request->file('featured_image')->store('products', 'public');
+                $product->image_url = $request->file('image')->store('products', 'public');
             }
-            if ($request->hasFile('og_image')) {
-                if ($product->og_image && !str_starts_with($product->og_image, 'http')) {
-                    Storage::disk('public')->delete($product->og_image);
-                }
-                $product->og_image = $request->file('og_image')->store('seo', 'public');
-            }
-            if ($request->hasFile('twitter_image')) {
-                if ($product->twitter_image && !str_starts_with($product->twitter_image, 'http')) {
-                    Storage::disk('public')->delete($product->twitter_image);
-                }
-                $product->twitter_image = $request->file('twitter_image')->store('seo', 'public');
-            }
+        
             $product->save();
 
             // Sync Features
@@ -287,14 +250,8 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
             
             // Delete associated images
-            if ($product->image && !str_starts_with($product->image, 'http')) {
-                Storage::disk('public')->delete($product->image);
-            }
-            if ($product->og_image && !str_starts_with($product->og_image, 'http')) {
-                Storage::disk('public')->delete($product->og_image);
-            }
-            if ($product->twitter_image && !str_starts_with($product->twitter_image, 'http')) {
-                Storage::disk('public')->delete($product->twitter_image);
+            if ($product->image_url && !str_starts_with($product->image_url, 'http')) {
+                Storage::disk('public')->delete($product->image_url);
             }
 
             $product->delete();

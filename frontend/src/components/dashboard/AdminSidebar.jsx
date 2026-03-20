@@ -47,7 +47,8 @@ const sidebarLinks = [
   { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },
   { name: "Blogs", href: "/admin/blogs", icon: FileText },
   { name: "Carrer", href: "/admin/carrer", icon: FileText },
-  { name: "Contact Enquiries", href: "/admin/enquiries", icon: Mail },
+  { name: "Contact Messages", href: "/admin/contact-message", icon: Mail },
+  { name: "Contact Enquiries", href: "/admin/contact-enquiries", icon: Mail },
 ];
 
 const AdminSidebar = ({ collapsed, setCollapsed }) => {

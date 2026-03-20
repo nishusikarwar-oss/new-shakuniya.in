@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -35,16 +34,16 @@ export default function Products() {
       setLoading(true);
       // Fetch products from API
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const responseData = await response.json();
-      
+
       // Handle different response formats
       let productsArray = [];
-      
+
       if (responseData.success === true && responseData.data) {
         if (responseData.data.data && Array.isArray(responseData.data.data)) {
           productsArray = responseData.data.data;
@@ -54,7 +53,7 @@ export default function Products() {
       } else if (Array.isArray(responseData)) {
         productsArray = responseData;
       }
-      
+
       // Fetch features and images for each product
       const productsWithDetails = await Promise.all(
         productsArray.map(async (product) => {
@@ -63,11 +62,12 @@ export default function Products() {
             const featuresResponse = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL}/product-features?product_id=${product.id}`
             );
-            
+
+            // FIX 1: was `features` (undefined variable), now correctly `featuresData`
             let featuresData = [];
             if (featuresResponse.ok) {
               const featuresJson = await featuresResponse.json();
-              
+
               if (featuresJson.success === true && featuresJson.data) {
                 if (Array.isArray(featuresJson.data)) {
                   featuresData = featuresJson.data;
@@ -78,10 +78,16 @@ export default function Products() {
                 featuresData = featuresJson;
               }
             }
-            
-            // Base URL for images
-            const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
-            const imageUrl = product.image ? (product.image.startsWith('http') ? product.image : `${mediaBaseUrl}/${product.image}`) : null;
+
+            // FIX 2: Build imageUrl correctly from the DB field `image_url`
+            let imageUrl = null;
+            if (product.image_url) {
+              if (product.image_url.startsWith("http")) {
+                imageUrl = product.image_url;
+              } else {
+                imageUrl = `http://127.0.0.1:8000/storage/${product.image_url}`;
+              }
+            }
 
             return {
               id: product.id,
@@ -89,11 +95,16 @@ export default function Products() {
               name: product.name || product.title || 'Untitled Product',
               title: product.title || product.name || 'Untitled Product',
               description: product.description || '',
-              short_description: product.short_description || 
-                (product.description ? product.description.substring(0, 100) + '...' : 'No description available'),
-              features: features,
+              short_description:
+                product.short_description ||
+                (product.description
+                  ? product.description.substring(0, 100) + '...'
+                  : 'No description available'),
+              // FIX 1: use featuresData (not undefined `features`)
+              features: featuresData,
+              // FIX 2: store resolved URL in `image`
               image: imageUrl,
-              icon: IconMap[product.icon_name] || Icons.HelpCircle
+              icon: IconMap[product.icon_name] || Icons.HelpCircle,
             };
           } catch (err) {
             console.error(`Error fetching details for product ${product?.id}:`, err);
@@ -103,20 +114,22 @@ export default function Products() {
               name: product?.name || product?.title || 'Untitled Product',
               title: product?.title || product?.name || 'Untitled Product',
               description: product?.description || '',
-              short_description: product?.short_description || 
-                (product?.description ? product.description.substring(0, 100) + '...' : 'No description available'),
+              short_description:
+                product?.short_description ||
+                (product?.description
+                  ? product.description.substring(0, 100) + '...'
+                  : 'No description available'),
               features: [],
               image: null,
-              icon: Icons.HelpCircle
+              icon: Icons.HelpCircle,
             };
           }
         })
       );
-      
+
       // Filter out any null products
-      const validProducts = productsWithDetails.filter(p => p !== null);
+      const validProducts = productsWithDetails.filter((p) => p !== null);
       setProducts(validProducts);
-      
     } catch (err) {
       setError(err.message);
       console.error('Error fetching products:', err);
@@ -158,12 +171,14 @@ export default function Products() {
             OUR INNOVATION
           </span>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white tracking-tight uppercase">
-            Our <span className="text-transparent animate-pulse bg-clip-text bg-gradient-to-r from-[#ff4dff] via-[#b366ff] to-[#00d9ff]">Products</span>
+            Our{' '}
+            <span className="text-transparent animate-pulse bg-clip-text bg-gradient-to-r from-[#ff4dff] via-[#b366ff] to-[#00d9ff]">
+              Products
+            </span>
           </h1>
           <p className="text-gray-300 text-lg md:text-xl max-w-3xl mx-auto font-medium">
-            Discover our range of cutting-edge digital products designed to
-            transform your business. From AI-powered automation to
-            comprehensive management solutions, we build for the future.
+            Discover our range of cutting-edge digital products designed to transform your business.
+            From AI-powered automation to comprehensive management solutions, we build for the future.
           </p>
 
           <div className="mt-8 flex justify-center">
@@ -192,7 +207,6 @@ export default function Products() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {products.map((product) => {
                 const IconComponent = product.icon;
-
                 return (
                   <Link
                     key={product.id}
@@ -202,6 +216,7 @@ export default function Products() {
                     <div className="glass-card p-0 rounded-[2rem] hover:bg-[#1a1a2e]/80 transition-all duration-500 hover:border-[#00d9ff]/50 hover:shadow-[0_0_40px_rgba(0,217,255,0.15)] hover:-translate-y-2 h-full flex flex-col overflow-hidden">
                       {/* Product Image */}
                       <div className="relative w-full h-52 overflow-hidden">
+                        {/* FIX 2: use product.image (resolved URL) instead of product.image_url */}
                         {product.image ? (
                           <img
                             src={product.image}
@@ -226,19 +241,24 @@ export default function Products() {
                         </p>
 
                         {/* Features Preview */}
-                        {product.features && Array.isArray(product.features) && product.features.length > 0 && (
-                          <ul className="space-y-3 mb-8 flex-grow">
-                            {product.features.map((feature, index) => (
-                              <li
-                                key={index}
-                                className="flex items-center text-gray-500 text-sm group-hover:text-gray-400 transition-colors"
-                              >
-                                <span className="w-1.5 h-1.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full mr-3 shadow-[0_0_5px_rgba(147,51,234,0.5)]" />
-                                {feature.name || feature.title || feature.feature_description || 'Feature'}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        {product.features &&
+                          Array.isArray(product.features) &&
+                          product.features.length > 0 && (
+                            <ul className="space-y-3 mb-8 flex-grow">
+                              {product.features.map((feature, index) => (
+                                <li
+                                  key={index}
+                                  className="flex items-center text-gray-500 text-sm group-hover:text-gray-400 transition-colors"
+                                >
+                                  <span className="w-1.5 h-1.5 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full mr-3 shadow-[0_0_5px_rgba(147,51,234,0.5)]" />
+                                  {feature.name ||
+                                    feature.title ||
+                                    feature.feature_description ||
+                                    'Feature'}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
 
                         {/* CTA */}
                         <div className="inline-flex items-center text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 group-hover:from-white group-hover:to-white transition-all duration-300 mt-auto pt-4 border-t border-white/5 uppercase tracking-widest">
@@ -260,12 +280,14 @@ export default function Products() {
           <div className="mt-16 text-center ">
             <div className="glass-card inline-block p-10 max-w-2xl rounded-[2rem] border border-white/10">
               <h2 className="text-3xl font-bold text-white mb-6">
-                Need a Custom <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Solution?</span>
+                Need a Custom{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">
+                  Solution?
+                </span>
               </h2>
               <p className="text-gray-300 mb-8 text-lg leading-relaxed">
-                We can build tailor-made products specifically for your unique
-                business challenges. Let&apos;s discuss how we can help you
-                innovate.
+                We can build tailor-made products specifically for your unique business challenges.
+                Let&apos;s discuss how we can help you innovate.
               </p>
 
               <Link href="/contact">

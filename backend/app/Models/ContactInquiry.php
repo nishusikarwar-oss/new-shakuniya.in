@@ -17,7 +17,7 @@ class ContactInquiry extends Model
     protected $table = 'contact_inquiries';
 
     protected $fillable = [
-        'company_id',
+        'company_name',
         'name',
         'email',
         'phone',
@@ -28,14 +28,15 @@ class ContactInquiry extends Model
         'user_agent'
     ];
 
+
     protected $casts = [
-        'company_id' => 'integer',
+        
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
 
     protected $attributes = [
-        'company_id' => 1,
+        'company_name' => 1,
         'status' => 'pending'
     ];
 
@@ -54,7 +55,7 @@ class ContactInquiry extends Model
      */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class, 'company_id', 'company_id');
+        return $this->belongsTo(Company::class, 'company_name', 'company_name');
     }
 
     /**

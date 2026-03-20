@@ -20,8 +20,8 @@ class ContactInquiryController extends Controller
         $query = ContactInquiry::with('company');
 
         // Filter by company
-        if ($request->has('company_id')) {
-            $query->where('company_id', $request->company_id);
+        if ($request->has('company_name')) {
+            $query->where('company_name', $request->company_name);
         }
 
         // Filter by status
@@ -66,7 +66,7 @@ class ContactInquiryController extends Controller
             'phone' => 'nullable|string|max:50',
             'service_interest' => 'nullable|string|max:255',
             'message' => 'required|string',
-            'company_id' => 'nullable|integer|exists:companies,company_id'
+            'company_name' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -78,10 +78,10 @@ class ContactInquiryController extends Controller
 
         $data = $request->all();
 
-        // Set default company_id if not provided
-        if (!isset($data['company_id'])) {
+        // Set default company_name if not provided
+        if (!isset($data['company_name'])) {
             $company = Company::first();
-            $data['company_id'] = $company?->company_id ?? 1;
+            $data['company_name'] = $company?->company_name ?? 1;
         }
 
         // Add IP and user agent
@@ -259,9 +259,9 @@ class ContactInquiryController extends Controller
      */
     public function stats(Request $request)
     {
-        $companyId = $request->get('company_id', 1);
+        $companyId = $request->get('company_name', 1);
         
-        $query = ContactInquiry::where('company_id', $companyId);
+        $query = ContactInquiry::where('company_name', $companyId);
         
         $total = $query->count();
         $pending = (clone $query)->pending()->count();
@@ -316,8 +316,8 @@ class ContactInquiryController extends Controller
     {
         $query = ContactInquiry::with('company');
 
-        if ($request->has('company_id')) {
-            $query->where('company_id', $request->company_id);
+        if ($request->has('company_name')) {
+            $query->where('company_name', $request->company_name);
         }
 
         if ($request->has('status')) {
