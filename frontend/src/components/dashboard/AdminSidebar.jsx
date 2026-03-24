@@ -10,7 +10,6 @@ import {
   Package,
   Image as ImageIcon,
   FileText,
-  Settings,
   LogOut,
   CardSim,
   ChevronLeft,
@@ -29,19 +28,11 @@ const sidebarLinks = [
     name: "Products",
     href: "/admin/products",
     icon: Package,
-    // subLinks: [
-    //   // { name: "Category", href: "/admin/products" },
-    //   { name: "Product Details", href: "/admin/products" },
-    // ],
   },
   {
     name: "Services",
     href: "/admin/services",
     icon: CardSim,
-    subLinks: [
-      { name: "Category", href: "/admin/services" },
-      { name: "Services Details", href: "/admin/services/servicedetails" },
-    ],
   },
   { name: "FAQ", href: "/admin/faq", icon: CardSim },
   { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },

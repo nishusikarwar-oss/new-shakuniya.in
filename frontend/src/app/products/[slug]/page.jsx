@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import * as Icons from "lucide-react";
-
 // Icon mapping
 const IconMap = {
   Zap: Icons.Zap,
@@ -24,7 +23,7 @@ async function getProductData(slug) {
     
     // First, get all products to find the one with matching slug
     const productsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-      next: { revalidate: 3600 } // Cache for 1 hour
+      // next: { revalidate: 3600 } // Cache for 1 hour
     });
     
     if (!productsResponse.ok) {
@@ -216,7 +215,7 @@ export async function generateMetadata({ params }) {
   
   if (!product) return {};
   
-  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'NEXT_PUBLIC_API_URL';
   const imageUrl = product.image ? (product.image.startsWith('http') ? product.image : `${mediaBaseUrl}/${product.image}`) : null;
 
   return {
@@ -325,7 +324,7 @@ export default async function ProductPage({ params }) {
   };
 
   // Base URL for images
-  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000';
+  const mediaBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'NEXT_PUBLIC_API_URL';
 
   // Helper to render image
   const renderImage = (path, alt) => {
@@ -333,15 +332,13 @@ export default async function ProductPage({ params }) {
     const src = path.startsWith('http') ? path : `${mediaBaseUrl}/${path}`;
     return (
       <img
-        src={product.image || src}
+        src={`http://127.0.0.1:8000/storage/${product.image}` || src}
         alt={alt}
         className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
       />
     );
   };
-
-  // src="http://127.0.0.1:8000/storage/products/l8sh26i7IA59eJxpAPNTEhONPpj92WAK3oabPXcv.png"
-
+  
   return (
     <>
       <Navbar />

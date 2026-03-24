@@ -65,6 +65,17 @@ class ProductFeatureController extends Controller
         }
     }
 
+    public function index()
+{
+    $features = ProductFeature::orderBy('display_order')->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'All product features retrieved successfully',
+        'data' => $features
+    ]);
+}
+
     /**
      * Get features for a specific product.
      */

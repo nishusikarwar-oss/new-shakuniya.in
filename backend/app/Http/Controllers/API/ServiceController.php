@@ -134,7 +134,7 @@ class ServiceController extends Controller
             $path = $request->file('featured_image')->store('services/featured', 'public');
             $data['featured_image'] = $path;
         }
-
+        
         $service = Service::create($data);
 
         return response()->json([

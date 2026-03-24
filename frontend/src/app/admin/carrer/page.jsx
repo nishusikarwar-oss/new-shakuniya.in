@@ -16,7 +16,7 @@ export default function CareerAdminPage() {
   const [perks,      setPerks]      = useState([]);
   const [loadPerks,  setLoadPerks]  = useState(true);
   const [savePerk,   setSavePerk]   = useState(false);
-  const [perkForm,   setPerkForm]   = useState({ title: "", icon: "FaGift" });
+  const [perkForm,   setPerkForm]   = useState({ title: "", icon: "", description: "" });
 
   const fetchPerks = async () => {
     setLoadPerks(true);
@@ -34,9 +34,9 @@ export default function CareerAdminPage() {
     if (!perkForm.title.trim()) { flash("error", "Perk title is required."); return; }
     setSavePerk(true);
     try {
-      await perksApi.create({ title: perkForm.title, icon: perkForm.icon, is_active: true });
+      await perksApi.create({ title: perkForm.title, icon: perkForm.icon, description: perkForm.description, is_active: true });
       flash("success", "Perk added.");
-      setPerkForm({ title: "", icon: "FaGift" });
+      setPerkForm({ title: "", icon: "", description: "" });
       fetchPerks();
     } catch (e) { flash("error", e.message); }
     finally { setSavePerk(false); }
@@ -113,62 +113,95 @@ export default function CareerAdminPage() {
       <section>
         <h2 className="text-xl font-bold mb-6">Perks & Benefits</h2>
 
-        <div className="bg-[#0f1525] p-4 rounded-lg mb-6 flex flex-wrap gap-3 items-end">
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">Title *</label>
-            <input type="text" placeholder="Perk title" value={perkForm.title}
-              onChange={(e) => setPerkForm({ ...perkForm, title: e.target.value })}
-              className="bg-[#05080f] border border-white/10 px-3 py-2 rounded w-64 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">Icon</label>
-            <select value={perkForm.icon} onChange={(e) => setPerkForm({ ...perkForm, icon: e.target.value })}
-              className="bg-[#05080f] border border-white/10 px-3 py-2 rounded text-sm">
-              {iconOptions.map((icon) => (<option key={icon} value={icon}>{icon}</option>))}
-            </select>
-          </div>
-          <button onClick={addPerk} disabled={savePerk}
-            className="bg-purple-600 px-5 py-2 rounded hover:bg-purple-700 transition flex items-center gap-2 disabled:opacity-50 text-sm">
-            {savePerk && <Loader2 size={14} className="animate-spin" />}
-            <Plus size={14} /> Add Perk
-          </button>
-        </div>
+       <div className="bg-[#0f1525] p-4 rounded-lg mb-6 flex flex-wrap gap-3 items-end">
+  <div>
+    <label className="text-xs text-gray-400 mb-1 block">Title *</label>
+    <input 
+      type="text" 
+      placeholder="Perk title" 
+      value={perkForm.title}
+      onChange={(e) => setPerkForm({ ...perkForm, title: e.target.value })}
+      className="bg-[#05080f] border border-white/10 px-3 py-2 rounded w-64 text-sm" 
+    />
+  </div>
+  <div>
+    <label className="text-xs text-gray-400 mb-1 block">Icon</label>
+    <select 
+      value={perkForm.icon} 
+      onChange={(e) => setPerkForm({ ...perkForm, icon: e.target.value })}
+      className="bg-[#05080f] border border-white/10 px-3 py-2 rounded text-sm"
+    >
+      {iconOptions.map((icon) => (
+        <option key={icon} value={icon}>{icon}</option>
+      ))}
+    </select>
+  </div>
+  <div>
+    <label className="text-xs text-gray-400 mb-1 block">Description</label>
+    <input 
+      type="text" 
+      placeholder="Perk description" 
+      value={perkForm.description || ''}
+      onChange={(e) => setPerkForm({ ...perkForm, description: e.target.value })}
+      className="bg-[#05080f] border border-white/10 px-3 py-2 rounded w-64 text-sm" 
+    />
+  </div>
+  <button 
+    onClick={addPerk} 
+    disabled={savePerk}
+    className="bg-purple-600 px-5 py-2 rounded hover:bg-purple-700 transition flex items-center gap-2 disabled:opacity-50 text-sm"
+  >
+    {savePerk && <Loader2 size={14} className="animate-spin" />}
+    <Plus size={14} /> Add Perk
+  </button>
+</div>
 
-        <div className="overflow-x-auto bg-[#0f1525] rounded-lg">
-          {loadPerks ? (
-            <div className="p-8 text-center text-gray-400 flex items-center justify-center gap-2">
-              <Loader2 size={18} className="animate-spin" /> Loading…
-            </div>
-          ) : (
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="bg-[#05080f] text-gray-300">
-                  <th className="p-3 text-left">#</th>
-                  <th className="p-3 text-left">Title</th>
-                  <th className="p-3 text-left">Icon</th>
-                  <th className="p-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(Array.isArray(perks) ? perks : []).map((p, i) => (
-                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-3">{i + 1}</td>
-                    <td className="p-3">{p.title}</td>
-                    <td className="p-3 text-purple-400">{p.icon}</td>
-                    <td className="p-3 text-center">
-                      <button onClick={() => deletePerk(p.id)} className="bg-red-600 px-3 py-1 rounded text-xs hover:bg-red-700 flex items-center gap-1 mx-auto">
-                        <Trash2 size={12} /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {(Array.isArray(perks) ? perks : []).length === 0 && (
-                  <tr><td colSpan="4" className="text-center p-6 text-gray-400">No perks yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+       <div className="overflow-x-auto bg-[#0f1525] rounded-lg">
+  {loadPerks ? (
+    <div className="p-8 text-center text-gray-400 flex items-center justify-center gap-2">
+      <Loader2 size={18} className="animate-spin" /> Loading…
+    </div>
+  ) : (
+    <table className="w-full border-collapse text-sm">
+      <thead>
+        <tr className="bg-[#05080f] text-gray-300">
+          <th className="p-3 text-left">#</th>
+          <th className="p-3 text-left">Title</th>
+          <th className="p-3 text-left">Description</th>
+          <th className="p-3 text-left">Icon</th>
+          <th className="p-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {(Array.isArray(perks) ? perks : []).map((p, i) => (
+          <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+            <td className="p-3">{i + 1}</td>
+            <td className="p-3 font-medium">{p.title}</td>
+            <td className="p-3 text-gray-300">
+              {p.description || <span className="text-gray-500 italic">No description</span>}
+            </td>
+            <td className="p-3 text-purple-400">{p.icon_name || p.icon_image || '—'}</td>
+            <td className="p-3 text-center">
+              <button 
+                onClick={() => deletePerk(p.id)} 
+                className="bg-red-600 px-3 py-1 rounded text-xs hover:bg-red-700 flex items-center gap-1 mx-auto"
+              >
+                <Trash2 size={12} /> Delete
+              </button>
+            </td>
+          </tr>
+        ))}
+        {(Array.isArray(perks) ? perks : []).length === 0 && (
+          <tr>
+            <td colSpan="5" className="text-center p-6 text-gray-400">
+              No perks yet.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  )}
+</div>
       </section>
 
       {/* ─── JOBS ──────────────────────────────────────────────────── */}

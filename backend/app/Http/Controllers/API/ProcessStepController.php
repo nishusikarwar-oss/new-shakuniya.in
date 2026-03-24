@@ -60,7 +60,8 @@ class ProcessStepController extends Controller
             'icon_name' => 'nullable|string|max:100',
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'step_number' => 'required|integer|min:1|unique:process_steps,step_number,NULL,step_id,company_id,' . ($request->company_id ?? 1),
-            'is_active' => 'nullable|boolean'
+            'is_active' => 'nullable|boolean',  
+
         ]);
 
         if ($validator->fails()) {

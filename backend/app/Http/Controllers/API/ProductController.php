@@ -127,13 +127,11 @@ class ProductController extends Controller
         // Convert is_active to boolean
         $data['is_active'] = $request->input('is_active') ? 1 : 0;
         // File Uploads
-            if ($request->hasFile('image')) {
-                if ($product->image_url && !str_starts_with($product->image_url, 'http')) {
-                    Storage::disk('public')->delete($product->image_url);
-                }
-               $data['image_url'] = $request->file('image')->store('products', 'public');
-            }
-        $product = Product::create($data);
+           if ($request->hasFile('image')) {
+    $data['image_url'] = $request->file('image')->store('products', 'public');
+}
+
+$product = Product::create($data);
 
         return response()->json([
             'success' => true,

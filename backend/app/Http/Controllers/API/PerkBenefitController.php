@@ -95,6 +95,9 @@ class PerkBenefitController extends Controller
         }
 
         $data = $request->except(['icon_image']);
+        
+        // Ensure description is set (even if empty string)
+        $data['description'] = $request->description ?? null;
 
         // Handle icon image upload
         if ($request->hasFile('icon_image')) {
@@ -104,6 +107,7 @@ class PerkBenefitController extends Controller
 
         $perk = PerkBenefit::create($data);
 
+        // Return the created perk with all fields
         return response()->json([
             'success' => true,
             'message' => 'Perk/Benefit created successfully',
@@ -163,6 +167,11 @@ class PerkBenefitController extends Controller
         }
 
         $data = $request->except(['icon_image']);
+        
+        // Ensure description is properly handled (allow empty string)
+        if ($request->has('description')) {
+            $data['description'] = $request->description;
+        }
 
         // Handle icon image upload
         if ($request->hasFile('icon_image')) {

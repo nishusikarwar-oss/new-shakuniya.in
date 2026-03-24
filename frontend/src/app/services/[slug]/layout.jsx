@@ -1,9 +1,18 @@
 export async function generateMetadata({ params }) {
-  const { slug } = params;
+ 
+const resolvedParams = await params;
+const slug = resolvedParams.slug;
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/${slug}`);
-    const data = await response.json();
-    if (data.success && data.data) {
+    const serviceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/${slug}`);
+    const responseText = await serviceResponse.text();
+      let data;
+      console.log("Raw API Response Layouty:", responseText);
+      try {
+        data = JSON.parse(responseText);        
+      } catch (error) {
+        console.error("Response is not valid JSON:", responseText);
+      }
+    if (data.success ) {
       return {
         title: `Shakuniya Solutions | ${data.data.title}`,
         description: data.data.description || `Learn more about our ${data.data.title} services.`,

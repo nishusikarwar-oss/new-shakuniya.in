@@ -84,7 +84,7 @@ const HeroSection = () => {
             We craft your business website as a powerful marketing tool
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
+          {/* <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
             <motion.button
               initial={{ x: -200, opacity: 0 }} // lg slide right
               animate={{ x: 0, opacity: 1 }}
@@ -111,7 +111,7 @@ const HeroSection = () => {
             >
               View Services
             </motion.button>
-          </div>
+          </div> */}
         </div>
 
         {/* Service Cards */}

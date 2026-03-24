@@ -75,7 +75,7 @@ class StatisticController extends Controller
             $company = Company::first();
             $data['company_id'] = $company?->company_id ?? 1;
         }
-
+$data['service_id'] = $request->input('service_id');
         $statistic = Statistic::create($data);
 
         return response()->json([

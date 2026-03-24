@@ -25,7 +25,8 @@ class Commitment extends Model
         'icon_name',
         'icon_url',
         'display_order',
-        'is_active'
+        'is_active',
+        'service_id',
     ];
 
     protected $casts = [

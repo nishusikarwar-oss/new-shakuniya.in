@@ -22,7 +22,8 @@ class WhyChooseUsPoint extends Model
         'company_id',
         'point_text',
         'display_order',
-        'is_active'
+        'is_active',
+        'service_id',
     ];
 
     protected $casts = [

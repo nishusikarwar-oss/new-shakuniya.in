@@ -25,7 +25,9 @@ class ProcessStep extends Model
         'icon_name',
         'icon_url',
         'step_number',
-        'is_active'
+        'is_active',
+        'service_id',
+        'step_id',
     ];
 
     protected $casts = [

@@ -68,7 +68,7 @@ class TestimonialController extends Controller
             'testimonial_text' => 'required|string',
             'rating' => 'nullable|integer|min:1|max:5',
             'display_order' => 'nullable|integer|min:0',
-            'is_active' => 'nullable|boolean'
+            // 'is_active' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
@@ -91,7 +91,7 @@ class TestimonialController extends Controller
             $path = $request->file('client_image')->store('testimonials', 'public');
             $data['client_image'] = $path;
         }
-
+        $data['is_active'] = $request->is_active == "true" ? 1 : 0;
         $testimonial = Testimonial::create($data);
 
         return response()->json([
